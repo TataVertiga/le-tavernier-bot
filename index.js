@@ -26,7 +26,18 @@ const client = new Client({
 
 const { checkKickLive } = require("./services/kick");
 const { checkTikTok } = require("./services/tiktok");
-const { onGuildMemberAdd } = require("./events/guildMemberAdd");
+// Chargement dynamique des événements
+const eventsPath = path.join(__dirname, "events");
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".js"));
+
+for (const file of eventFiles) {
+  const event = require(`./events/${file}`);
+  if (event.name && typeof event.execute === "function") {
+    client.on(event.name, (...args) => event.execute(...args));
+    console.log(`🎉 Événement chargé : ${event.name}`);
+  }
+}
+
 
 client.once("ready", () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user.tag}`);
