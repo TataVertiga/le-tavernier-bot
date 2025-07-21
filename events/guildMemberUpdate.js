@@ -12,8 +12,8 @@ module.exports = {
 
       channel.send(`🍻 *CLING CLING CLING* ! Fermez vos mouilles, un nouvel éclopé pousse la porte !  
 Bienvenue ${newMember} dans la Taverne de Tata Verti, où la bière pique le nez et les bancs tiennent avec de la ficelle !  
-T’es désormais un Geux à part entière. Va donc éructer ton histoire dans <#1062355033481240586>  
-et colle-toi un titre ronflant dans <#1062360038277392474> — c’est pas qu’on juge, mais un gueux sans blason, c’est comme un pet sans odeur : inutile.
+T’es désormais un Geux à part entière. Va donc éructer ton histoire dans <#871362324668227624>  
+et colle-toi un titre ronflant dans <#845580188339404800> — c’est pas qu’on juge, mais un gueux sans blason, c’est comme un pet sans odeur : inutile.
 
 Allez, installe-toi, évite les flaques suspectes, et fais comme chez toi… mais pas trop. ❤️`);
     }
