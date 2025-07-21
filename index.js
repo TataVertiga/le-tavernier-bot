@@ -113,4 +113,4 @@ client.on("messageCreate", async message => {
   }
 });
 
-client.login(process.env.TOKEN).catch(console.error);
+client.login(process.env.TOKEN);
