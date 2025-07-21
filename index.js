@@ -21,11 +21,15 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers
   ],
 });
 
 const { checkKickLive } = require("./services/kick");
 const { checkTikTok } = require("./services/tiktok");
+const reglementValidation = require("./services/reglementValidation"); // 👈 Ajout
+
 // Chargement dynamique des événements
 const eventsPath = path.join(__dirname, "events");
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".js"));
@@ -38,6 +42,9 @@ for (const file of eventFiles) {
   }
 }
 
+// Branchement de l'écouteur sur la réaction du règlement
+client.on(reglementValidation.name, (...args) => reglementValidation.execute(...args));
+console.log("📜 Validation règlement branchée !");
 
 client.once("ready", () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user.tag}`);
