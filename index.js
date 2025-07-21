@@ -43,7 +43,10 @@ for (const file of eventFiles) {
 }
 
 // Branchement de l'écouteur sur la réaction du règlement
-client.on(reglementValidation.name, (...args) => reglementValidation.execute(...args));
+client.on(reglementValidation.name, (...args) => {
+  console.log(`[DEBUG] Réaction détectée pour l'événement : ${reglementValidation.name}`);
+  reglementValidation.execute(...args);
+});
 console.log("📜 Validation règlement branchée !");
 
 client.once("ready", () => {
@@ -120,4 +123,4 @@ client.on("messageCreate", async message => {
   }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
