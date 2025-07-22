@@ -124,3 +124,11 @@ client.on("messageCreate", async message => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
+
+const cleanup = require('./cleanupWelcomedUsers');
+
+client.once('ready', () => {
+  console.log(`${client.user.tag} est prêt.`);
+  cleanup(client); // Nettoyage des utilisateurs déjà accueillis
+});

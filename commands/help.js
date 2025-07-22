@@ -17,7 +17,7 @@ module.exports = {
         { name: "🧪 À venir", value: "C'est un secret... pour l'instant." }
       )
       .setFooter({
-        text: "Le Tavernier • Pense à t’hydrater (ou pas)",
+        text: "Le Tavernier • T'as soif ? Moi aussi.",
         iconURL: message.client.user.displayAvatarURL()
       });
 
