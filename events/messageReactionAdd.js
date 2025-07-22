@@ -17,6 +17,10 @@ module.exports = {
     const guild = reaction.message.guild;
     const member = await guild.members.fetch(user.id);
 
+    // Vérifie si le membre a déjà le rôle
+    const avaitDejaLeRole = member.roles.cache.has(roleIdGeux);
+    if (avaitDejaLeRole) return;
+
     // Ajout du rôle "Geux"
     try {
       await member.roles.add(roleIdGeux);
