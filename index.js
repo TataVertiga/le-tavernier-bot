@@ -26,6 +26,7 @@ const client = new Client({
 
 const { checkKickLive } = require("./services/kick");
 const { checkTikTok } = require("./services/tiktok");
+
 // Chargement dynamique des événements
 const eventsPath = path.join(__dirname, "events");
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".js"));
@@ -38,14 +39,11 @@ for (const file of eventFiles) {
   }
 }
 
-
 client.once("ready", () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user.tag}`);
   setInterval(() => checkKickLive(client), 30000);
   setInterval(() => checkTikTok(client), 180000);
 });
-
-client.on(Events.GuildMemberAdd, member => onGuildMemberAdd(client, member));
 
 client.on("messageCreate", async message => {
   if (message.author.bot) return;

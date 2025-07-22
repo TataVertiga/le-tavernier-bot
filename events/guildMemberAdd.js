@@ -1,18 +1,10 @@
-// events/guildMemberAdd.js
-
-const WELCOME_CHANNEL_ID = "837135924390264855";
-
-async function onGuildMemberAdd(client, member) {
-  try {
-    if (member.guild.id !== "837135924390264852") return;
-
-    const channel = await client.channels.fetch(WELCOME_CHANNEL_ID);
+module.exports = {
+  name: 'guildMemberAdd',
+  execute: async (member) => {
+    const channel = member.guild.channels.cache.get("837135924390264855");
     if (!channel) return;
 
-    await channel.send(`🍻 Bienvenue <@${member.id}> à La Taverne de Tata ! Passe le seuil, lis le règlement, prends ton rôle, et si t'es pas sage... une cla-claque et ça dégage !`);
-  } catch (error) {
-    console.error("Erreur dans le message de bienvenue :", error.message);
+    channel.send(`🍺 **Bienvenue à la taverne, ${member}!**  
+Approche donc, pose ton fessier là où c’est encore tiède et présente-toi aux autres gueux. Le premier qui paie sa tournée est rarement le dernier à se faire des copains. Santé !`);
   }
-}
-
-module.exports = { onGuildMemberAdd };
+};
