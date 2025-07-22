@@ -129,6 +129,30 @@ client.login(process.env.DISCORD_TOKEN);
 const cleanup = require('./cleanupWelcomedUsers');
 
 client.once('ready', () => {
+
+  const fs = require('fs');
+  const path = require('path');
+  const filePath = path.join(__dirname, 'data/welcomedUsers.json');
+  const logChannel = client.channels.cache.get('845582902674980894');
+
+  try {
+    let welcomedUsers = [];
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      welcomedUsers = JSON.parse(data);
+    }
+
+    if (!welcomedUsers.includes("test-write-id")) {
+      welcomedUsers.push("test-write-id");
+      fs.writeFileSync(filePath, JSON.stringify(welcomedUsers, null, 2), 'utf8');
+      if (logChannel) logChannel.send("✅ Test d’écriture JSON réussi.");
+    } else {
+      if (logChannel) logChannel.send("ℹ️ ID test déjà présent dans welcomedUsers.json.");
+    }
+  } catch (err) {
+    if (logChannel) logChannel.send("❌ Échec d’écriture dans welcomedUsers.json : " + err.message);
+  }
+
   console.log(`${client.user.tag} est prêt.`);
   cleanup(client); // Nettoyage des utilisateurs déjà accueillis
 });
