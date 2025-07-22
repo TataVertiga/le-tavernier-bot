@@ -1,22 +1,25 @@
-// events/guildMemberUpdate.js
+const { Events } = require('discord.js');
+
+const ROLE_GUEUX = '872399675091714058'; // ID du rôle "gueux"
+const SALON_BIENVENUE = '837135924390264855'; // Salon #accueil
+
 module.exports = {
-  name: 'guildMemberUpdate',
+  name: Events.GuildMemberUpdate,
   async execute(oldMember, newMember) {
-    const roleId = '872399675091714058'; // ID du rôle GUEUX
-    const salonId = '837135924390264855'; // ID du salon de bienvenue
+    try {
+      // Vérifie si le rôle "gueux" vient d'être ajouté
+      const avaitPasGueux = !oldMember.roles.cache.has(ROLE_GUEUX);
+      const aMaintenantGueux = newMember.roles.cache.has(ROLE_GUEUX);
 
-    // Si le rôle "GUEUX" vient d’être ajouté
-    if (!oldMember.roles.cache.has(roleId) && newMember.roles.cache.has(roleId)) {
-      const channel = newMember.guild.channels.cache.get(salonId);
-      if (!channel) return;
-
-      channel.send(`🍻 *CLING CLING CLING* ! Fermez vos mouilles, un nouvel éclopé pousse la porte !  
-Bienvenue ${newMember} dans la Taverne de Tata Verti, où la bière pique le nez et les bancs tiennent avec de la ficelle !  
-T’es désormais un Geux à part entière. Va donc éructer ton histoire dans <#871362324668227624>  
-et colle-toi un titre ronflant dans <#845580188339404800> — c’est pas qu’on juge, mais un gueux sans blason, c’est comme un pet sans odeur : inutile.
-
-Allez, installe-toi, évite les flaques suspectes, et fais comme chez toi… mais pas trop. ❤️`);
+      if (avaitPasGueux && aMaintenantGueux) {
+        const channel = newMember.guild.channels.cache.get(SALON_BIENVENUE);
+        if (channel) {
+          await channel.send(`🍻 Bienvenue <@${newMember.id}> à la Taverne ! Prends un tabouret, y'a de la soupe aux choux.`);
+          console.log(`🎉 Message de bienvenue envoyé pour ${newMember.user.tag}`);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Erreur dans guildMemberUpdate.js :", error);
     }
   }
 };
-
