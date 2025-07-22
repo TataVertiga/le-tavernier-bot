@@ -7,7 +7,7 @@ const recentWelcomes = new Set(); // Empêche les doublons immédiats
 module.exports = async (oldMember, newMember) => {
   const roleId = '1208124766277318716'; // ID du rôle "gueux"
   const welcomeChannelId = '837135924390264855';
-  const debugChannelId = '845582902674980894'; // À remplacer si besoin
+  const debugChannelId = '845582902674980894'; // Salon log confirmé
 
   const avaitPasLeRoleAvant = !oldMember.roles.cache.has(roleId);
   const aLeRoleMaintenant = newMember.roles.cache.has(roleId);
