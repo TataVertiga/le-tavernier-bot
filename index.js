@@ -1,6 +1,6 @@
-const { Client, GatewayIntentBits, Events, Partials } = require("discord.js");
+const { Client, GatewayIntentBits, Events } = require("discord.js");
 require("dotenv").config();
-require("./server");
+require("./server"); // Serveur Express pour rester en ligne sur Replit
 const { PREFIX } = require("./config");
 const fs = require("fs");
 const path = require("path");
@@ -21,17 +21,11 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildMembers
   ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
 });
 
 const { checkKickLive } = require("./services/kick");
 const { checkTikTok } = require("./services/tiktok");
-const reglementValidation = require("./services/reglementValidation");
-console.log("✅ reglementValidation.js chargé et prêt !");
-
 // Chargement dynamique des événements
 const eventsPath = path.join(__dirname, "events");
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".js"));
@@ -44,39 +38,8 @@ for (const file of eventFiles) {
   }
 }
 
-client.on(reglementValidation.name, (...args) => {
-  console.log(`[DEBUG] Réaction détectée pour l'événement : ${reglementValidation.name}`);
-  reglementValidation.execute(...args);
-});
-console.log("📜 Validation règlement branchée !");
 
 client.once("ready", () => {
-
-  const fs = require('fs');
-  const path = require('path');
-  const filePath = path.join(__dirname, 'data/welcomedUsers.json');
-  const logChannel = client.channels.cache.get('845582902674980894');
-
-  try {
-    let welcomedUsers = [];
-    if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf8');
-      welcomedUsers = JSON.parse(data);
-    }
-
-    if (!welcomedUsers.includes("test-write-id")) {
-      welcomedUsers.push("test-write-id");
-      fs.writeFileSync(filePath, JSON.stringify(welcomedUsers, null, 2), 'utf8');
-      if (logChannel) logChannel.send("✅ Test d’écriture JSON réussi.");
-    } else {
-      if (logChannel) logChannel.send("ℹ️ ID test déjà présent dans welcomedUsers.json.");
-    }
-  } catch (err) {
-    if (logChannel) logChannel.send("❌ Échec d’écriture dans welcomedUsers.json : " + err.message);
-  }
-
-  cleanup(client);
-
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user.tag}`);
   setInterval(() => checkKickLive(client), 30000);
   setInterval(() => checkTikTok(client), 180000);
@@ -103,6 +66,7 @@ client.on("messageCreate", async message => {
     return;
   }
 
+  // Réactions au ping
   if (message.mentions.has(client.user)) {
     const now = Date.now();
     if (!client.lastPingTimes) client.lastPingTimes = {};
@@ -149,27 +113,4 @@ client.on("messageCreate", async message => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
-
-
-const cleanup = require('./cleanupWelcomedUsers');
-
-client.once('ready', () => {
-  console.log(`${client.user.tag} est prêt.`);
-  cleanup(client); // Nettoyage des utilisateurs déjà accueillis
-});
-
-const logChannelId = '845582902674980894';
-
-client.once("ready", async () => {
-  try {
-    const logChannel = await client.channels.fetch(logChannelId);
-    if (logChannel) {
-      await logChannel.send("📡 Le Tavernier est bien réveillé et connecté.");
-    } else {
-      console.log("❌ Salon de log introuvable après fetch.");
-    }
-  } catch (err) {
-    console.error("❌ Erreur lors de la récupération du salon log :", err);
-  }
-});
+client.login(process.env.TOKEN);
