@@ -158,3 +158,18 @@ client.once('ready', () => {
   console.log(`${client.user.tag} est prêt.`);
   cleanup(client); // Nettoyage des utilisateurs déjà accueillis
 });
+
+const logChannelId = '845582902674980894';
+
+client.once("ready", async () => {
+  try {
+    const logChannel = await client.channels.fetch(logChannelId);
+    if (logChannel) {
+      await logChannel.send("📡 Le Tavernier est bien réveillé et connecté.");
+    } else {
+      console.log("❌ Salon de log introuvable après fetch.");
+    }
+  } catch (err) {
+    console.error("❌ Erreur lors de la récupération du salon log :", err);
+  }
+});
