@@ -1,8 +1,8 @@
 const { Events } = require('discord.js');
 
-const MESSAGE_ID = '881639401732579349'; // Message du règlement
-const CHANNEL_ID = '845576163598139402'; // Salon du règlement
-const ROLE_ID = '872399675091714058'; // Rôle "gueux"
+const MESSAGE_ID = '881639401732579349'; // ID du message du règlement
+const CHANNEL_ID = '845576163598139402'; // ID du salon du règlement
+const ROLE_ID = '872399675091714058'; // ID du rôle "gueux"
 const EMOJI_VALIDATION = '✅';
 const LOG_CHANNEL_ID = '845582902674980894'; // Salon des logs
 
