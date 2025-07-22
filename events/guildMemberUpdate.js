@@ -7,6 +7,7 @@ const recentWelcomes = new Set(); // Empêche les doublons immédiats
 module.exports = async (oldMember, newMember) => {
   const roleId = '1208124766277318716'; // ID du rôle "gueux"
   const welcomeChannelId = '837135924390264855';
+  const debugChannelId = '845582902674980894'; // À remplacer si besoin
 
   const avaitPasLeRoleAvant = !oldMember.roles.cache.has(roleId);
   const aLeRoleMaintenant = newMember.roles.cache.has(roleId);
@@ -15,7 +16,6 @@ module.exports = async (oldMember, newMember) => {
     console.log(`🔄 Rôle "gueux" détecté pour ${newMember.user.tag} (${newMember.id})`);
     console.log("📁 __dirname =", __dirname);
 
-    // Anti-doublon rapide
     if (recentWelcomes.has(newMember.id)) {
       console.log("⏳ Double détection ignorée");
       return;
@@ -42,6 +42,7 @@ module.exports = async (oldMember, newMember) => {
     }
 
     const channel = newMember.guild.channels.cache.get(welcomeChannelId);
+    const debugChannel = newMember.guild.channels.cache.get(debugChannelId);
     if (!channel) {
       console.error("❌ Salon de bienvenue introuvable !");
       return;
@@ -54,8 +55,14 @@ Approche donc, pose ton fessier là où c’est encore tiède et présente-toi a
     try {
       fs.writeFileSync(filePath, JSON.stringify(welcomedUsers, null, 2), 'utf8');
       console.log("✅ Ajouté à welcomedUsers.json :", newMember.id);
+      if (debugChannel) {
+        debugChannel.send(`✅ Écriture réussie dans welcomedUsers.json pour <@${newMember.id}>`);
+      }
     } catch (err) {
       console.error("❌ Erreur écriture du fichier welcomedUsers.json :", err);
+      if (debugChannel) {
+        debugChannel.send(`❌ Échec de l'écriture dans welcomedUsers.json pour <@${newMember.id}>`);
+      }
     }
   }
 };
