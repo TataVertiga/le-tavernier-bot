@@ -1,6 +1,6 @@
-const { Client, GatewayIntentBits, Events } = require("discord.js");
+const { Client, GatewayIntentBits, Events, Partials } = require("discord.js");
 require("dotenv").config();
-require("./server"); // Serveur Express pour rester en ligne sur Replit
+require("./server");
 const { PREFIX } = require("./config");
 const fs = require("fs");
 const path = require("path");
@@ -24,11 +24,13 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildMembers
   ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
 });
 
 const { checkKickLive } = require("./services/kick");
 const { checkTikTok } = require("./services/tiktok");
-const reglementValidation = require("./services/reglementValidation"); // 👈 Ajout
+const reglementValidation = require("./services/reglementValidation");
+console.log("✅ reglementValidation.js chargé et prêt !");
 
 // Chargement dynamique des événements
 const eventsPath = path.join(__dirname, "events");
@@ -42,7 +44,6 @@ for (const file of eventFiles) {
   }
 }
 
-// Branchement de l'écouteur sur la réaction du règlement
 client.on(reglementValidation.name, (...args) => {
   console.log(`[DEBUG] Réaction détectée pour l'événement : ${reglementValidation.name}`);
   reglementValidation.execute(...args);
@@ -76,7 +77,6 @@ client.on("messageCreate", async message => {
     return;
   }
 
-  // Réactions au ping
   if (message.mentions.has(client.user)) {
     const now = Date.now();
     if (!client.lastPingTimes) client.lastPingTimes = {};
