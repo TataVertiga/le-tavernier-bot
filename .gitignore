@@ -131,3 +131,6 @@ dist
 
 # Replit debugger
 .breakpoints
+# Fichier de suivi des gueux accueillis
+data/welcomedUsers.json
+

@@ -1,25 +1,37 @@
-const { Events } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 
-const ROLE_GUEUX = '872399675091714058'; // ID du rôle "gueux"
-const SALON_BIENVENUE = '837135924390264855'; // Salon #accueil
+const filePath = path.join(__dirname, '../data/welcomedUsers.json');
 
-module.exports = {
-  name: Events.GuildMemberUpdate,
-  async execute(oldMember, newMember) {
-    try {
-      // Vérifie si le rôle "gueux" vient d'être ajouté
-      const avaitPasGueux = !oldMember.roles.cache.has(ROLE_GUEUX);
-      const aMaintenantGueux = newMember.roles.cache.has(ROLE_GUEUX);
+module.exports = async (oldMember, newMember) => {
+  const roleId = '1208124766277318716'; // ID du rôle "gueux"
+  const welcomeChannelId = '837135924390264855';
 
-      if (avaitPasGueux && aMaintenantGueux) {
-        const channel = newMember.guild.channels.cache.get(SALON_BIENVENUE);
-        if (channel) {
-          await channel.send(`🍻 Bienvenue <@${newMember.id}> à la Taverne ! Prends un tabouret, y'a de la soupe aux choux.`);
-          console.log(`🎉 Message de bienvenue envoyé pour ${newMember.user.tag}`);
-        }
+  const avaitPasLeRoleAvant = !oldMember.roles.cache.has(roleId);
+  const aLeRoleMaintenant = newMember.roles.cache.has(roleId);
+
+  if (avaitPasLeRoleAvant && aLeRoleMaintenant) {
+    let welcomedUsers = [];
+    if (fs.existsSync(filePath)) {
+      try {
+        const data = fs.readFileSync(filePath, 'utf8');
+        welcomedUsers = JSON.parse(data);
+      } catch (err) {
+        console.error('Erreur lecture welcomedUsers.json :', err);
       }
-    } catch (error) {
-      console.error("❌ Erreur dans guildMemberUpdate.js :", error);
     }
+
+    if (welcomedUsers.includes(newMember.id)) return;
+
+    const channel = newMember.guild.channels.cache.get(welcomeChannelId);
+    if (!channel) return;
+
+    channel.send(`🍺 **Bienvenue à la taverne, ${newMember}!**  
+Approche donc, pose ton fessier là où c’est encore tiède et présente-toi aux autres gueux. Le premier qui paie sa tournée est rarement le dernier à se faire des copains. Santé !`);
+
+    welcomedUsers.push(newMember.id);
+    fs.writeFile(filePath, JSON.stringify(welcomedUsers, null, 2), err => {
+      if (err) console.error('Erreur écriture welcomedUsers.json :', err);
+    });
   }
 };
