@@ -24,7 +24,6 @@ const client = new Client({
   ],
 });
 
-const { checkKickLive } = require("./services/kick");
 const { checkTikTok } = require("./services/tiktok");
 
 // Chargement dynamique des événements
@@ -41,7 +40,6 @@ for (const file of eventFiles) {
 
 client.once("ready", () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user.tag}`);
-  setInterval(() => checkKickLive(client), 30000);
   setInterval(() => checkTikTok(client), 180000);
 });
 
