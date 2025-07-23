@@ -1,20 +1,32 @@
-// services/tiktok.js
-const Parser = require("rss-parser");
-const parser = new Parser();
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
 const CHANNEL_ID_TIKTOK = "845579568488251412";
-const ROLE_TIKTOK = "<@&881684898732187668>";
-let lastTikTok = "";
+const TIKTOK_USERNAME = "tatavertiga";
+const STORAGE_PATH = path.join(__dirname, "../data/last_tiktok_id.txt");
+
+let lastTikTokId = null;
+
+// Charger depuis le fichier au démarrage
+if (fs.existsSync(STORAGE_PATH)) {
+  lastTikTokId = fs.readFileSync(STORAGE_PATH, "utf8");
+}
 
 async function checkTikTok(client) {
   try {
-    const feed = await parser.parseURL("https://www.tiktok.com/@tata.vertiga/rss");
-    const latest = feed.items[0];
+    const url = `https://www.tiktok.com/@${TIKTOK_USERNAME}`;
+    const response = await axios.get(url);
+    const match = response.data.match(/"id":"(\d{19})"/);
 
-    if (latest && latest.link !== lastTikTok) {
-      const channel = await client.channels.fetch(CHANNEL_ID_TIKTOK);
-      await channel.send(`🎵 Tata balance du TikTok les joyeux gueux ! ${ROLE_TIKTOK} ➡️ ${latest.link}`);
-      lastTikTok = latest.link;
+    if (match) {
+      const currentId = match[1];
+      if (currentId !== lastTikTokId) {
+        lastTikTokId = currentId;
+        fs.writeFileSync(STORAGE_PATH, currentId);
+        const channel = await client.channels.fetch(CHANNEL_ID_TIKTOK);
+        await channel.send(`📱 Tata a pondu un nouveau TikTok pour les gueux : https://www.tiktok.com/@${TIKTOK_USERNAME}/video/${currentId}`);
+      }
     }
   } catch (err) {
     console.error("Erreur TikTok:", err.message);
