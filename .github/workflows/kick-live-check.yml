@@ -1,0 +1,30 @@
+name: Check Kick Live & Notify Discord
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Toutes les 5 minutes
+  workflow_dispatch:       # Pour le lancer manuellement aussi
+
+jobs:
+  kick_live_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Vérifie si TataVertiga est en live
+        run: |
+          echo "Checking Kick live status..."
+          response=$(curl -s -A "Mozilla/5.0" https://kick.com/api/v1/channels/tatavertiga)
+          is_live=$(echo "$response" | grep -o '"livestream":null')
+
+          if [ -z "$is_live" ]; then
+            echo "Tata est EN LIVE sur Kick!"
+
+            curl -X POST "https://discord.com/api/v10/channels/1397681937082220687/messages" \
+              -H "Authorization: Bot ${{ secrets.DISCORD_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                    "content": ":bell: Mortecouille bande de Gueux <@&881684792058466354> TataVertiga lance un live sauvage et ce n'est pas sorcellerie Messire... https://kick.com/tatavertiga"
+                  }'
+          else
+            echo "Tata n'est pas en live."
+          fi
