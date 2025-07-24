@@ -1,9 +1,13 @@
-# 🍺 Le Tavernier - Bot Discord Médiéval
+<p align="center">
+  <img src="./assets/le-tavernier.png" alt="Le Tavernier Logo" width="200"/>
+</p>
 
-![Le Tavernier Logo](./assets/le-tavernier.png)
+<h1 align="center">🍺 Le Tavernier - Bot Discord Médiéval</h1>
 
-Bienvenue dans la taverne la plus beauf du royaume !  
-**Le Tavernier** est un bot Discord conçu pour animer ta communauté avec un style médiéval, de l'humour franchouillard et une touche de folie RP.
+<p align="center">
+  Bienvenue dans la taverne la plus beauf du royaume !<br>
+  <strong>Le Tavernier</strong> est un bot Discord conçu pour animer ta communauté avec un style médiéval, de l'humour franchouillard et une touche de folie RP.
+</p>
 
 ---
 
