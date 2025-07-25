@@ -11,14 +11,26 @@
 
 ---
 
-## ⚙️ Fonctionnalités principales
+## ⚙️ Fonctionnalités actuelles
 
-- 🎉 Messages de bienvenue RP dans la taverne
-- 🟢 Alertes automatiques de live **Kick**
-- 🎬 Annonces TikTok et YouTube
-- 📌 Attribution de rôles par réactions
-- 📣 Faux système IA RP avec +500 répliques personnalisées
-- 🤡 Commandes fun (`t!douzinite`, `t!prout`, `t!bonjour`, `t!help`...)
+- 🎉 Messages de bienvenue RP dans un salon spécifique
+- 🟢 Annonce automatique des lives **Kick.com** via API officielle
+- 🐦 Tweet automatique à chaque lancement de live
+- 🤡 Commandes fun disponibles :
+  - `!bonjour`
+  - `!douzinite`
+  - `!prout`
+  - `!help`
+
+---
+
+## 🔄 Fonctionnalités prévues (en cours de dev)
+
+- 🎬 Annonces TikTok & YouTube automatisées
+- 📌 Attribution de rôles via réactions
+- 🧠 Faux système IA RP avec +500 répliques aléatoires
+- 🧣 Interface web pour ajouter des commandes sans coder
+- 🎁 Giveaways automatiques dans le style taverne
 
 ---
 
@@ -26,25 +38,36 @@
 
 1. Clone ce repo :
    ```bash
-   git clone https://github.com/TonCompte/le-tavernier-bot.git
+   git clone https://github.com/TataVertiga/le-tavernier-bot.git
+   cd le-tavernier-bot
    ```
+
 2. Installe les dépendances :
    ```bash
    npm install
    ```
-3. Configure ton fichier `.env` :
+
+3. Configure le fichier `.env` :
    ```env
-   DISCORD_TOKEN=ton_token
-   GUILD_ID=ton_id_serveur
-   CHANNEL_ID=id_du_salon_alertes
-   KICK_USERNAME=ton_nom_kick
+   DISCORD_TOKEN=...
+   CHANNEL_ID=...
+   KICK_USERNAME=...
+   KICK_CLIENT_ID=...
+   KICK_CLIENT_SECRET=...
+   TWITTER_ENABLED=true
+   TWITTER_API_KEY=...
+   TWITTER_API_SECRET=...
+   TWITTER_ACCESS_TOKEN=...
+   TWITTER_ACCESS_SECRET=...
+   PORT=10000
    ```
+
 4. Démarre le bot :
    ```bash
    npm start
    ```
 
-> 💡 Tu peux aussi lancer uniquement le serveur web (nécessaire pour Render/UptimeRobot) :
+> 💡 Tu peux aussi démarrer uniquement le serveur web (utilisé pour Render) :
 > ```bash
 > npm run web
 > ```
@@ -53,7 +76,10 @@
 
 ## 🛠 Hébergement
 
-Le bot est prévu pour tourner en continu via [Render.com](https://render.com) avec un `server.js` Express pour garder le service actif, couplé à [UptimeRobot](https://uptimerobot.com/) pour le ping régulier.
+Le bot fonctionne 24h/24 grâce à :
+
+- [Render.com](https://render.com) pour héberger le projet Node.js
+- [UptimeRobot](https://uptimerobot.com) pour maintenir le serveur actif
 
 ---
 
@@ -62,12 +88,13 @@ Le bot est prévu pour tourner en continu via [Render.com](https://render.com) a
 ```
 le-tavernier-bot/
 ├── commands/           # Commandes Discord (bonjour, douzinite, etc.)
-├── events/             # Gestion des événements (arrivée, update)
-├── services/           # Intégrations auto (Kick, TikTok...)
-├── .env                # Variables d’environnement (non versionnées)
-├── config.js           # Configuration du bot
-├── index.js            # Point d’entrée principal du bot
-├── server.js           # Serveur Express pour hébergement
+├── events/             # Gestion des événements (arrivées, rôles)
+├── services/           # Intégrations auto (Kick, Twitter, etc.)
+├── data/               # Fichiers temporaires (statuts, IDs)
+├── .env                # Variables d’environnement (non versionné)
+├── config.js           # Préfixe & config du bot
+├── index.js            # Démarrage du bot
+├── server.js           # Serveur Express keep-alive
 └── package.json        # Dépendances et scripts
 ```
 
@@ -75,17 +102,18 @@ le-tavernier-bot/
 
 ## 🤝 Contribuer
 
-Tu veux proposer une nouvelle commande, ajouter des répliques beauf, ou intégrer un service ? Forke le projet, fais tes modifs, et propose une PR avec bonne humeur !
+Tu veux proposer une nouvelle commande, des répliques beauf ou une amélioration ?  
+Fais un fork du projet, propose une PR, et le Tavernier lèvera sa chope en ton honneur.
 
 ---
 
 ## 🧙‍♂️ À propos
 
-Développé par la communauté de **Tata Vertiga** pour les gueux, les poivrots et les troubadours.  
-Ce bot ne remplace pas la cervoise, mais il peut annoncer quand y en a une à boire.
+Développé par **Tata Vertiga** pour les poivrots, les trolls, les streamers et les gueux.  
+Le Tavernier ne boit pas vos tokens, mais il peut annoncer quand y a de la cervoise.
 
 ---
 
 ## 🐾 Licence
 
-ISC - Fais-en bon usage, ou subis le courroux du Tavernier.
+ISC — Bois ça avec sagesse, ou subis le courroux du Tavernier.
