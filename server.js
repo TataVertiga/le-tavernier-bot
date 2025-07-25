@@ -54,7 +54,7 @@ async function checkKickLive() {
     if (isLive && !lastStatus) {
       console.log("✅ LIVE détecté via API officielle Kick ! Envoi Discord...");
       await axios.post(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
-      await publierTweetLiveKick();
+// await publierTweetLiveKick(); // désactivé temporairement (twitter.js manquant)
         content: `:bell: Mortecouille bande de Gueux <@&881684792058466354> TataVertiga lance un live sauvage et ce n'est pas sorcellerie Messire... https://kick.com/${KICK_USERNAME}`
       }, {
         headers: {
