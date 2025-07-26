@@ -1,5 +1,4 @@
 // Nouveau server.js avec anti-double-post (début de live uniquement) et API officielle Kick
-require("dotenv").config();
 const { get, post } = require("axios");
 const { TwitterApi } = require("twitter-api-v2");
 const express = require('express')
