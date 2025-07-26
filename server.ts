@@ -2,6 +2,8 @@
 require("dotenv").config();
 const { get, post } = require("axios");
 const { TwitterApi } = require("twitter-api-v2");
+const express = require('express')
+
 
 const twitterClient = new TwitterApi({
   appKey: process.env.TWITTER_API_KEY,
@@ -25,6 +27,7 @@ const DISCORD_CHANNEL_ID = process.env.CHANNEL_ID;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const KICK_USERNAME = process.env.KICK_USERNAME;
 const KICK_CLIENT_ID = process.env.KICK_CLIENT_ID;
+const app = express()
 
 let lastStatus = false;
 
@@ -59,3 +62,11 @@ async function checkKickLive() {
 }
 
 setInterval(checkKickLive, 60000);
+
+app.get('/', (req, res) => {
+  res.send('Hello World!')
+})
+
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}`)
+})
