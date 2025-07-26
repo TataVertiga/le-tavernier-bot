@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 require("dotenv").config();
-require("./server"); // Serveur Express pour rester en ligne sur Replit
+require("./server.ts"); // Serveur Express pour rester en ligne sur Replit
 const { PREFIX } = require("./config");
 const fs = require("fs");
 const path = require("path");
