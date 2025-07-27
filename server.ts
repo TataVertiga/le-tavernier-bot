@@ -35,11 +35,10 @@ type KickResponse = {
     livestream:boolean
   }
 }
-// Fonction pour vérifier le statut du live sur Kick via l'API officielle
 
 async function checkKickLive() {
   try {
-    const res = await (new Promise<KickResponse_>((resolve) => {
+    const res = await (new Promise<KickResponse>((resolve) => {
     setTimeout(() => {
         resolve({
         data: {
@@ -49,18 +48,19 @@ async function checkKickLive() {
     }, 2000);
     }));
 
-    const res = await axios.get(`https://kick.com/api/v1/channels/${KICK_USERNAME}`, {
+    /*const res = await axios.get(`https://kick.com/api/v1/channels/${KICK_USERNAME}`, {
       headers: {
         "Client-ID": KICK_CLIENT_ID,
         "User-Agent": "Mozilla/5.0"
       }
-    });
+    });*/
 
     const isLive = res.data.livestream !== null;
+    console.log("Islive status:", isLive);
 
     if (isLive && !lastStatus) {
       console.log(":white_check_mark: LIVE détecté via API officielle Kick ! Envoi Discord...");
-      await axios.post(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
+      await post(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
 // await publierTweetLiveKick(); // désactivé temporairement (twitter.js manquant)
         content: `:bell: Mortecouille bande de Gueux <@&881684792058466354> TataVertiga lance un live sauvage et ce n'est pas sorcellerie Messire... https://kick.com/${KICK_USERNAME}`
       }, {
@@ -74,7 +74,7 @@ async function checkKickLive() {
       console.log(":white_check_mark: FIN de LIVE détecté via API officielle Kick !");
 
     lastStatus = isLive;
-    setTimeout(checkKickLiveTest, 60 * 1000);
+    setTimeout(checkKickLive, 60 * 1000);
   } catch (err) {
     console.error(":x: Erreur Kick (API officielle):", err.message);
   }
