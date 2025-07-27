@@ -11,69 +11,18 @@
 
 ---
 
-## ⚙️ Fonctionnalités actuelles
+## ⚙️ Le Tavernier - RP Médiéval
+
+### ✅ Fonctionnalités actuelles
 
 - 🎉 Messages de bienvenue RP dans un salon spécifique
 - 🟢 Annonce automatique des lives **Kick.com** via API officielle
-- 🐦 Tweet automatique à chaque lancement de live
 - 🤡 Commandes fun disponibles :
-  - `!bonjour`
-  - `!douzinite`
-  - `!prout`
-  - `!help`
-
----
-
-## 🔄 Fonctionnalités prévues (en cours de dev)
-
-- 🎬 Annonces TikTok & YouTube automatisées
-- 📌 Attribution de rôles via réactions
-- 🧠 Faux système IA RP avec +500 répliques aléatoires
-- 🧣 Interface web pour ajouter des commandes sans coder
-- 🎁 Giveaways automatiques dans le style taverne
-
----
-
-## 🚀 Lancer le bot en local
-
-1. Clone ce repo :
-   ```bash
-   git clone https://github.com/TataVertiga/le-tavernier-bot.git
-   cd le-tavernier-bot
-   ```
-
-2. Installe les dépendances :
-   ```bash
-   npm install
-   ```
-
-3. Configure le fichier `.env` :
-   ```env
-   DISCORD_TOKEN=...
-   CHANNEL_ID=...
-   KICK_USERNAME=...
-   KICK_CLIENT_ID=...
-   KICK_CLIENT_SECRET=...
-   TWITTER_ENABLED=true
-   TWITTER_API_KEY=...
-   TWITTER_API_SECRET=...
-   TWITTER_ACCESS_TOKEN=...
-   TWITTER_ACCESS_SECRET=...
-   PORT=10000
-   ```
-
-4. Démarre le bot :
-   ```bash
-   npm start
-   ```
-
-> 💡 Tu peux aussi démarrer uniquement le serveur web (utilisé pour Render) :
-> ```bash
-> npm run web
-> ```
-
----
-
+  - `t!bonjour`
+  - `t!douzinite`
+  - `t!prout`
+  - `t!help`
+  
 ## 🛠 Hébergement
 
 Le bot fonctionne 24h/24 grâce à :
@@ -99,6 +48,23 @@ le-tavernier-bot/
 ```
 
 ---
+
+### ☑️ En cours de développement
+
+- 🤖 Interaction RP avec Le Tavernier  
+  (répondre selon le contexte, élargir son vocabulaire)
+
+---
+
+## 💡 Fonctionnalités prévues
+
+- 🧙‍♂️ Interface back-end privée pour gérer le bot
+- 🪄 Ajout de nouvelles commandes fun et RP
+- 📺 Notifications YouTube automatisées
+- 🎵 Notifications TikTok automatisées
+- 🏷️ Gestion des rôles par réactions
+- 🎁 Giveaways dans le style taverne
+- 🎞️ Création automatique de clips Kick
 
 ## 🤝 Contribuer
 
