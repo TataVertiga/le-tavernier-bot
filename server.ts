@@ -74,9 +74,11 @@ async function checkKickLive() {
       console.log(":white_check_mark: FIN de LIVE détecté via API officielle Kick !");
 
     lastStatus = isLive;
-    setTimeout(checkKickLive, 60 * 1000);
   } catch (err: any) {
     console.error(":x: Erreur Kick (API officielle):", err.message);
+  }
+  finally {
+    setTimeout(checkKickLive, 60 * 1000);
   }
 }
 
