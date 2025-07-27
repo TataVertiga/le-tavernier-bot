@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 require("dotenv").config();
-require("./server.ts"); // Serveur Express pour rester en ligne sur Replit
-const { PREFIX } = require("./config");
+require("./dist/server"); // Serveur Express pour rester en ligne sur Replit
+const { PREFIX } = require("./config.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -24,7 +24,7 @@ const client = new Client({
   ],
 });
 
-const { checkTikTok } = require("./services/tiktok");
+const { checkTikTok } = require("./services/tiktok.js");
 
 // Chargement dynamique des événements
 const eventsPath = path.join(__dirname, "events");

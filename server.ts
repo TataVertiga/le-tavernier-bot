@@ -38,7 +38,7 @@ type KickResponse = {
 
 async function checkKickLive() {
   try {
-    const res = await (new Promise<KickResponse>((resolve) => {
+    /*const res = await (new Promise<KickResponse>((resolve) => {
     setTimeout(() => {
         resolve({
         data: {
@@ -46,16 +46,16 @@ async function checkKickLive() {
         }
         });
     }, 2000);
-    }));
+    }));*/
 
-    /*const res = await axios.get(`https://kick.com/api/v1/channels/${KICK_USERNAME}`, {
+    const res = await get(`https://kick.com/api/v1/channels/${KICK_USERNAME}`, {
       headers: {
         "Client-ID": KICK_CLIENT_ID,
         "User-Agent": "Mozilla/5.0"
       }
-    });*/
+    });
 
-    const isLive = res.data.livestream !== null;
+    const isLive = res.data.livestream;
     console.log("Islive status:", isLive);
 
     if (isLive && !lastStatus) {
@@ -75,14 +75,14 @@ async function checkKickLive() {
 
     lastStatus = isLive;
     setTimeout(checkKickLive, 60 * 1000);
-  } catch (err) {
+  } catch (err: any) {
     console.error(":x: Erreur Kick (API officielle):", err.message);
   }
 }
 
 checkKickLive();
 
-app.get("/", (req, res) => {
+app.get("/", (_: any, res: { send: (arg0: string) => void; }) => {
   res.send("Kick Watcher connecté à l'API officielle.");
 });
 
