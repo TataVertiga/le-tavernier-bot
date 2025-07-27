@@ -30,9 +30,26 @@ const app = express()
 
 let lastStatus = false;
 
+type KickResponse = {
+  data:{
+    livestream:boolean
+  }
+}
+// Fonction pour vérifier le statut du live sur Kick via l'API officielle
+
 async function checkKickLive() {
   try {
-    const res = await get(`https://kick.com/api/v1/channels/${KICK_USERNAME}`, {
+    const res = await (new Promise<KickResponse_>((resolve) => {
+    setTimeout(() => {
+        resolve({
+        data: {
+            livestream: Math.random() > 0.5 ? true : false
+        }
+        });
+    }, 2000);
+    }));
+
+    const res = await axios.get(`https://kick.com/api/v1/channels/${KICK_USERNAME}`, {
       headers: {
         "Client-ID": KICK_CLIENT_ID,
         "User-Agent": "Mozilla/5.0"
@@ -42,8 +59,8 @@ async function checkKickLive() {
     const isLive = res.data.livestream !== null;
 
     if (isLive && !lastStatus) {
-      console.log("✅ LIVE détecté via API officielle Kick ! Envoi Discord...");
-      await post(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
+      console.log(":white_check_mark: LIVE détecté via API officielle Kick ! Envoi Discord...");
+      await axios.post(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
 // await publierTweetLiveKick(); // désactivé temporairement (twitter.js manquant)
         content: `:bell: Mortecouille bande de Gueux <@&881684792058466354> TataVertiga lance un live sauvage et ce n'est pas sorcellerie Messire... https://kick.com/${KICK_USERNAME}`
       }, {
@@ -53,19 +70,20 @@ async function checkKickLive() {
         }
       });
     }
+    else if (!isLive && lastStatus)
+      console.log(":white_check_mark: FIN de LIVE détecté via API officielle Kick !");
 
     lastStatus = isLive;
+    setTimeout(checkKickLiveTest, 60 * 1000);
   } catch (err) {
-    console.error("❌ Erreur Kick (API officielle):", err.message);
+    console.error(":x: Erreur Kick (API officielle):", err.message);
   }
 }
 
-setInterval(checkKickLive, 60000);
+checkKickLive();
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+app.get("/", (req, res) => {
+  res.send("Kick Watcher connecté à l'API officielle.");
+});
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`)
-})
+app.listen(PORT, () => console.log(`🚀 Serveur en ligne sur le port ${PORT}`));
