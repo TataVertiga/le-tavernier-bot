@@ -1,3 +1,5 @@
+import { Message } from 'discord.js';
+
 const gifs = [
   "https://tenor.com/bhqOH.gif",
   "https://tenor.com/bQ3SA.gif",
@@ -12,22 +14,23 @@ const gifs = [
   "https://tenor.com/bnlUE.gif",
 ];
 
-const cooldowns = new Map();
-const COOLDOWN = 10000; // 10 secondes
+const cooldowns = new Map<string, number>();
+const COOLDOWN = 10_000; // 10 secondes
 
-module.exports = {
-  name: "prout",
-  description: "Envoie un gif de prout au hasard",
-  execute(message) {
+export default {
+  name: 'prout',
+  description: 'Envoie un gif de prout au hasard',
+  execute(message: Message) {
     const now = Date.now();
     const last = cooldowns.get(message.author.id) || 0;
 
     if (now - last < COOLDOWN) {
-      return message.reply("🥴 Doucement, une prout par tournée...");
+      message.reply("🥴 Doucement, une prout par tournée...");
+      return;
     }
 
     cooldowns.set(message.author.id, now);
     const random = gifs[Math.floor(Math.random() * gifs.length)];
-    message.channel.send(random);
+    (message.channel as any).send(random);
   }
 };

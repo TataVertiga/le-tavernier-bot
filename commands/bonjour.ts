@@ -1,7 +1,9 @@
-module.exports = {
-  name: "bonjour",
-  description: "Salue le Tavernier comme un bon gueux",
-  execute(message) {
+import { Message } from 'discord.js';
+
+export default {
+  name: 'bonjour',
+  description: 'Salue le Tavernier comme un bon gueux',
+  execute(message: Message) {
     const replies = [
       "Bonjour toi… T'as l'air frais comme une bière tiède.",
       "Salut l'ami ! T'as pas une tournée à payer par hasard ?",

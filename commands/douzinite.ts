@@ -1,8 +1,9 @@
-// commands/douzinite.js
-module.exports = {
-  name: "douzinite",
-  description: "Balance une réponse aléatoire sur la Douzinite",
-  execute(message) {
+import { Message } from 'discord.js';
+
+export default {
+  name: 'douzinite',
+  description: 'Balance une réponse aléatoire sur la Douzinite',
+  execute(message: Message) {
     const douziniteQuotes = [
       "Je suis pas docteur, mais là c’est une douzinite stade terminal. Faut isoler le patient et lui faire boire 3 pintes de suite.",
       "La prophétie parlait d’un jour où les mots perdraient tout sens… Ce jour est arrivé.",

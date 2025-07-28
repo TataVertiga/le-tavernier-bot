@@ -1,11 +1,11 @@
-const { EmbedBuilder } = require("discord.js");
+import { EmbedBuilder, Message } from 'discord.js';
 
-module.exports = {
-  name: "help",
+export default {
+  name: 'help',
   description: "Affiche la carte du Tavernier",
-  execute(message) {
+  execute(message: Message) {
     const embed = new EmbedBuilder()
-      .setColor(0x9b59b6) // Violet (style Discord)
+      .setColor(0x9b59b6)
       .setTitle("🍺 La Carte du Tavernier")
       .setDescription("Voici les commandes que tu peux brailler dans la taverne :")
       .addFields(
@@ -18,9 +18,10 @@ module.exports = {
       )
       .setFooter({
         text: "Le Tavernier • T'as soif ? Moi aussi.",
-        iconURL: message.client.user.displayAvatarURL()
+        iconURL: message.client.user?.displayAvatarURL() ?? undefined
       });
 
-    message.channel.send({ embeds: [embed] });
+    (message.channel as any).send({ embeds: [embed] });
   }
 };
+

@@ -1,9 +1,14 @@
-const { Events } = require('discord.js');
+import {
+  Events,
+  MessageReaction,
+  User,
+  TextChannel
+} from 'discord.js';
 
-module.exports = {
+export default {
   name: Events.MessageReactionAdd,
-  async execute(reaction, user) {
-    if (user.bot) return; // Ignore les bots
+  async execute(reaction: MessageReaction, user: User) {
+    if (user.bot) return;
 
     const messageIdReglement = '881639401732579349';
     const roleIdGeux = '872399675091714058';
@@ -15,13 +20,11 @@ module.exports = {
     if (reaction.emoji.name !== '✅') return;
 
     const guild = reaction.message.guild;
+    if (!guild) return;
+
     const member = await guild.members.fetch(user.id);
+    if (member.roles.cache.has(roleIdGeux)) return;
 
-    // Vérifie si le membre a déjà le rôle
-    const avaitDejaLeRole = member.roles.cache.has(roleIdGeux);
-    if (avaitDejaLeRole) return;
-
-    // Ajout du rôle "Geux"
     try {
       await member.roles.add(roleIdGeux);
     } catch (err) {
@@ -29,9 +32,8 @@ module.exports = {
       return;
     }
 
-    // Message RP de bienvenue
     const channel = guild.channels.cache.get(channelId);
-    if (!channel) return;
+    if (!channel || !(channel instanceof TextChannel)) return;
 
     channel.send(`🍻 CLING CLING CLING ! Fermez vos mouilles, un nouvel éclopé pousse la porte !
 Bienvenue ${member} dans la Taverne de Tata Verti, où la bière pique le nez et les bancs tiennent avec de la ficelle !
