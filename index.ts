@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { initKick } from './services/kick.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,8 +19,7 @@ app.get('/', (_, res) => res.send('🍺 Le Tavernier est en ligne !'));
 app.listen(process.env.PORT || 10000, () =>
   console.log(`🚀 Serveur Express actif`)
 );
-
-import kickService from './services/kick.js';
+ 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -27,7 +27,6 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ],
 }) as Client & { lastPingTimes?: Record<string, number> };
-kickService(client);
 
 
 // --- Chargement dynamique des commandes ---
@@ -123,3 +122,6 @@ if (message.content.startsWith(PREFIX)) {
 });
 
 client.login(process.env.TOKEN);
+
+// --- Initialisation des services ---
+initKick();
