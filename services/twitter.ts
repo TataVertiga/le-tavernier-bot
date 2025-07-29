@@ -56,9 +56,12 @@ export async function publierTweetLiveKick(): Promise<void> {
   }
 
   try {
-    const tweetText = `🎥 Tata Vertiga est EN LIVE sur Kick !  
-La taverne s’anime, les gueux s’agitent… Viens mettre le bazar avec nous !  
-👉 https://kick.com/${process.env.KICK_USERNAME}`;
+    const tweetText = `🎥 Je suis EN LIVE sur Kick 
+    🍺 La taverne est ouverte, ça sent déjà la bagarre !  
+    Bouge ton fondement et viens foutre le bordel.
+    #KickStreaming #StreamerFR #Gaming  
+    https://kick.com/${process.env.KICK_USERNAME}`;
+
 
     await twitterClient.v2.tweet(tweetText);
     console.log("[TWITTER] 🐦 ✅ Tweet envoyé avec succès !");

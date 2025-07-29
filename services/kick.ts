@@ -9,8 +9,8 @@ let kickToken = "";
 // ✅ Fichier pour éviter double notif Discord
 const lastDiscordFile = path.join(process.cwd(), 'last_discord.json');
 
-// ✅ Image RP fixe pour annonce initiale
-const defaultImage = "https://media.discordapp.net/attachments/845579523013869569/888428596572602368/SPOILER_tataVertiga_preview.png";
+// ✅ Image RP fixe (toujours affichée)
+const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; 
 
 // ✅ Type exact de la réponse Kick
 type KickResponse = {
@@ -18,9 +18,6 @@ type KickResponse = {
     slug: string;
     livestream: {
       is_live: boolean;
-      thumbnail?: {
-        url: string; // URL de preview si dispo
-      };
     } | null;
   }[];
 };
@@ -31,24 +28,19 @@ type KickTokenBody = {
   token_type: string;
 };
 
-// --- Fonctions de gestion anti-doublon Discord ---
+// --- Fonctions anti-doublon Discord ---
 function alreadyNotifiedDiscord(): boolean {
   if (fs.existsSync(lastDiscordFile)) {
     try {
       const data = JSON.parse(fs.readFileSync(lastDiscordFile, 'utf8'));
-      if (data.liveId === process.env.KICK_USERNAME) {
-        return true;
-      }
+      if (data.liveId === process.env.KICK_USERNAME) return true;
     } catch {}
   }
   return false;
 }
 
 function markDiscordNotified() {
-  fs.writeFileSync(
-    lastDiscordFile,
-    JSON.stringify({ liveId: process.env.KICK_USERNAME, time: Date.now() })
-  );
+  fs.writeFileSync(lastDiscordFile, JSON.stringify({ liveId: process.env.KICK_USERNAME, time: Date.now() }));
 }
 
 function resetDiscordMemory() {
@@ -63,8 +55,8 @@ function resetDiscordMemory() {
 // --- Token Kick ---
 async function getKickToken(): Promise<KickTokenBody> {
   console.log("[KICK] 🔑 Récupération du token...");
-  const response = await fetch('https://id.kick.com/oauth/token', {
-    method: 'POST',
+  const response = await fetch("https://id.kick.com/oauth/token", {
+    method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: process.env.KICK_CLIENT_ID || "",
@@ -81,72 +73,44 @@ async function getKickToken(): Promise<KickTokenBody> {
   return response.json();
 }
 
-// --- Envoi initial embed Discord ---
-async function sendDiscordEmbed(previewUrl: string) {
-  const res = await axios.post(
+// --- Envoi embed Discord avec bouton RP + lien dans l'embed ---
+async function sendDiscordEmbed() {
+  await axios.post(
     `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`,
     {
-      content: `<@&881684792058466354> 🍺 Mortecouille bande de gueux ! Un live sauvage apparaît !`,
+      content: `🍺 Mortecouille bande de gueux ! Un live sauvage apparaît sur <@&881684792058466354> !`,
       embeds: [
         {
-          title: "⚔️ TataVertiga est EN LIVE sur Kick !",
+          title: "⚔️ TATA LANCE UN LIVE SUR KICK !",
           description: `**La taverne s’anime, les gueux s’agitent…**  
-Rejoins-nous pour un moment épique sur Kick 🏰
+Les pintes se remplissent et la musique résonne.  
 
-[▶️ **Clique ici pour rejoindre le live**](https://kick.com/${process.env.KICK_USERNAME})`,
+▶️ [**Clique ici pour rejoindre le live**](https://kick.com/${process.env.KICK_USERNAME})`,
           color: 0x00ff00,
           thumbnail: { url: "https://kick.com/favicon.ico" },
-          image: { url: previewUrl },
+          image: { url: defaultImage },
           footer: { text: "Le Tavernier • Live Kick Alert", icon_url: "https://kick.com/favicon.ico" },
           timestamp: new Date().toISOString()
+        }
+      ],
+      components: [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2, // Button
+              style: 5, // Link Button
+              label: "🍺 Entrer dans la taverne",
+              url: `https://kick.com/${process.env.KICK_USERNAME}`
+            }
+          ]
         }
       ]
     },
     { headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, "Content-Type": "application/json" } }
   );
 
-  return res.data.id; // ID du message pour édition
-}
-
-// --- Mise à jour embed avec preview Kick ---
-async function updateDiscordEmbedWithPreview(messageId: string) {
-  for (let i = 0; i < 5; i++) { // Essaye 5 fois (toutes les 3 sec)
-    await new Promise(r => setTimeout(r, 3000));
-
-    const res = await fetch(`https://api.kick.com/public/v1/channels?slug=${process.env.KICK_USERNAME}`, {
-      method: "GET",
-      headers: { "Authorization": "Bearer " + kickToken }
-    });
-    const data: KickResponse = await res.json();
-    const livePreview = data.data[0]?.livestream?.thumbnail?.url
-      || `https://static-cdn.kick.com/live_thumbnails/${process.env.KICK_USERNAME}.jpg`;
-
-    if (livePreview && !livePreview.includes("favicon")) {
-      console.log("[DISCORD] 🎯 Preview Kick trouvée → mise à jour de l'embed");
-
-      await axios.patch(
-        `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages/${messageId}`,
-        {
-          embeds: [
-            {
-              title: "⚔️ TataVertiga est EN LIVE sur Kick !",
-              description: `**La taverne s’anime, les gueux s’agitent…**  
-Rejoins-nous pour un moment épique sur Kick 🏰
-
-[▶️ **Clique ici pour rejoindre le live**](https://kick.com/${process.env.KICK_USERNAME})`,
-              color: 0x00ff00,
-              thumbnail: { url: "https://kick.com/favicon.ico" },
-              image: { url: livePreview },
-              footer: { text: "Le Tavernier • Live Kick Alert", icon_url: "https://kick.com/favicon.ico" },
-              timestamp: new Date().toISOString()
-            }
-          ]
-        },
-        { headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, "Content-Type": "application/json" } }
-      );
-      break; // Stop si trouvé
-    }
-  }
+  console.log("[DISCORD] 📢 Notification envoyée avec lien + bouton RP !");
 }
 
 // --- Vérification live Kick ---
@@ -154,7 +118,7 @@ async function checkKickLive() {
   console.log("[KICK] 📡 Vérification de l'état du live...");
 
   const response = await fetch(`https://api.kick.com/public/v1/channels?slug=${process.env.KICK_USERNAME}`, {
-    method: 'GET',
+    method: "GET",
     headers: { "Authorization": "Bearer " + kickToken }
   });
 
@@ -162,8 +126,7 @@ async function checkKickLive() {
     console.log("[KICK] ♻️ Token expiré → Rafraîchissement...");
     kickToken = (await getKickToken()).access_token;
     return checkKickLive();
-  }
-  else if (response.status != 200) {
+  } else if (response.status != 200) {
     console.error(`[KICK] ❌ Erreur API : ${response.status}`);
     return setTimeout(checkKickLive, 30000);
   }
@@ -171,13 +134,12 @@ async function checkKickLive() {
   const data: KickResponse = await response.json();
   let isLive = data.data[0]?.livestream?.is_live ?? false;
 
-  // --- Mode debug simulation ---
-  if (process.env.DEBUG_KICK_MODE === 'LIVE') {
+  // Mode debug
+  if (process.env.DEBUG_KICK_MODE === "LIVE") {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation début de live");
     isLive = true;
     lastStatus = false;
-  }
-  else if (process.env.DEBUG_KICK_MODE === 'OFF') {
+  } else if (process.env.DEBUG_KICK_MODE === "OFF") {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation fin de live");
     isLive = false;
     lastStatus = true;
@@ -189,18 +151,15 @@ async function checkKickLive() {
     console.log("[KICK] ✅ Live détecté → Envoi notifications...");
 
     if (!alreadyNotifiedDiscord()) {
-      const messageId = await sendDiscordEmbed(defaultImage);
-      updateDiscordEmbedWithPreview(messageId);
+      await sendDiscordEmbed();
       markDiscordNotified();
-      console.log("[DISCORD] 📢 Notification envoyée + mise à jour prévue !");
+      console.log("[DISCORD] 📢 Notification envoyée !");
     } else {
       console.log("[DISCORD] ⚠️ Déjà notifié → Pas de doublon.");
     }
 
-    // 🐦 Tweet auto
     await publierTweetLiveKick();
-  }
-  else if (!isLive && lastStatus) {
+  } else if (!isLive && lastStatus) {
     resetDiscordMemory();
     resetTweetMemory();
   }
@@ -209,6 +168,7 @@ async function checkKickLive() {
   setTimeout(checkKickLive, 60000);
 }
 
+// --- Initialisation Kick ---
 export async function initKick() {
   console.log("[KICK] 🚀 Initialisation du système de détection...");
   kickToken = (await getKickToken()).access_token;
