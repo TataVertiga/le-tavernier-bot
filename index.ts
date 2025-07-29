@@ -19,7 +19,7 @@ app.get('/', (_, res) => res.send('🍺 Le Tavernier est en ligne !'));
 app.listen(process.env.PORT || 10000, () =>
   console.log(`🚀 Serveur Express actif`)
 );
- 
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -27,7 +27,6 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ],
 }) as Client & { lastPingTimes?: Record<string, number> };
-
 
 // --- Chargement dynamique des commandes ---
 const commands = new Map<string, any>();
@@ -60,23 +59,18 @@ client.once('ready', () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 });
 
+// --- Gestion des messages & ping ---
 client.on(Events.MessageCreate, async (message: Message) => {
   if (message.author.bot) return;
-
-  console.log(`📨 Message reçu : ${message.content}`);
 
   // --- Commandes ---
   if (message.content.startsWith(PREFIX)) {
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const commandName = args.shift()?.toLowerCase();
 
-    console.log(`🔍 Commande détectée : ${commandName}`);
-
     if (!commandName) return;
 
     const command = commands.get(commandName);
-    console.log(`📦 Commande trouvée ? ${command ? "Oui" : "Non"}`);
-
     if (command) {
       try {
         await command.execute(message, args);
