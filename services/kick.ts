@@ -9,12 +9,19 @@ let kickToken = "";
 // ✅ Fichier pour éviter double notif Discord
 const lastDiscordFile = path.join(process.cwd(), 'last_discord.json');
 
+// ✅ Image RP fixe pour annonce initiale
+const defaultImage = "https://media.discordapp.net/attachments/845579523013869569/888428596572602368/SPOILER_tataVertiga_preview.png";
+
 // ✅ Type exact de la réponse Kick
 type KickResponse = {
   data: {
-    stream: {
+    slug: string;
+    livestream: {
       is_live: boolean;
-    } | null; // parfois null si pas en live
+      thumbnail?: {
+        url: string; // URL de preview si dispo
+      };
+    } | null;
   }[];
 };
 
@@ -74,6 +81,74 @@ async function getKickToken(): Promise<KickTokenBody> {
   return response.json();
 }
 
+// --- Envoi initial embed Discord ---
+async function sendDiscordEmbed(previewUrl: string) {
+  const res = await axios.post(
+    `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`,
+    {
+      content: `<@&881684792058466354> 🍺 Mortecouille bande de gueux ! Un live sauvage apparaît !`,
+      embeds: [
+        {
+          title: "⚔️ TataVertiga est EN LIVE sur Kick !",
+          description: `**La taverne s’anime, les gueux s’agitent…**  
+Rejoins-nous pour un moment épique sur Kick 🏰
+
+[▶️ **Clique ici pour rejoindre le live**](https://kick.com/${process.env.KICK_USERNAME})`,
+          color: 0x00ff00,
+          thumbnail: { url: "https://kick.com/favicon.ico" },
+          image: { url: previewUrl },
+          footer: { text: "Le Tavernier • Live Kick Alert", icon_url: "https://kick.com/favicon.ico" },
+          timestamp: new Date().toISOString()
+        }
+      ]
+    },
+    { headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, "Content-Type": "application/json" } }
+  );
+
+  return res.data.id; // ID du message pour édition
+}
+
+// --- Mise à jour embed avec preview Kick ---
+async function updateDiscordEmbedWithPreview(messageId: string) {
+  for (let i = 0; i < 5; i++) { // Essaye 5 fois (toutes les 3 sec)
+    await new Promise(r => setTimeout(r, 3000));
+
+    const res = await fetch(`https://api.kick.com/public/v1/channels?slug=${process.env.KICK_USERNAME}`, {
+      method: "GET",
+      headers: { "Authorization": "Bearer " + kickToken }
+    });
+    const data: KickResponse = await res.json();
+    const livePreview = data.data[0]?.livestream?.thumbnail?.url
+      || `https://static-cdn.kick.com/live_thumbnails/${process.env.KICK_USERNAME}.jpg`;
+
+    if (livePreview && !livePreview.includes("favicon")) {
+      console.log("[DISCORD] 🎯 Preview Kick trouvée → mise à jour de l'embed");
+
+      await axios.patch(
+        `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages/${messageId}`,
+        {
+          embeds: [
+            {
+              title: "⚔️ TataVertiga est EN LIVE sur Kick !",
+              description: `**La taverne s’anime, les gueux s’agitent…**  
+Rejoins-nous pour un moment épique sur Kick 🏰
+
+[▶️ **Clique ici pour rejoindre le live**](https://kick.com/${process.env.KICK_USERNAME})`,
+              color: 0x00ff00,
+              thumbnail: { url: "https://kick.com/favicon.ico" },
+              image: { url: livePreview },
+              footer: { text: "Le Tavernier • Live Kick Alert", icon_url: "https://kick.com/favicon.ico" },
+              timestamp: new Date().toISOString()
+            }
+          ]
+        },
+        { headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, "Content-Type": "application/json" } }
+      );
+      break; // Stop si trouvé
+    }
+  }
+}
+
 // --- Vérification live Kick ---
 async function checkKickLive() {
   console.log("[KICK] 📡 Vérification de l'état du live...");
@@ -94,18 +169,18 @@ async function checkKickLive() {
   }
 
   const data: KickResponse = await response.json();
-  let isLive = data.data[0]?.stream?.is_live ?? false;
+  let isLive = data.data[0]?.livestream?.is_live ?? false;
 
   // --- Mode debug simulation ---
   if (process.env.DEBUG_KICK_MODE === 'LIVE') {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation début de live");
     isLive = true;
-    lastStatus = false; // force un nouveau live
+    lastStatus = false;
   }
   else if (process.env.DEBUG_KICK_MODE === 'OFF') {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation fin de live");
     isLive = false;
-    lastStatus = true; // force fin de live
+    lastStatus = true;
   }
 
   console.log(`[KICK] 🎥 isLive: ${isLive}`);
@@ -113,18 +188,11 @@ async function checkKickLive() {
   if (isLive && !lastStatus) {
     console.log("[KICK] ✅ Live détecté → Envoi notifications...");
 
-    // 🔹 Protection anti-double notif Discord
     if (!alreadyNotifiedDiscord()) {
-      await axios.post(`https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`, {
-        content: `:bell: Mortecouille bande de Gueux <@&881684792058466354> TataVertiga lance un live sauvage et ce n'est pas sorcellerie Messire... https://kick.com/${process.env.KICK_USERNAME}`
-      }, {
-        headers: {
-          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-          "Content-Type": "application/json"
-        }
-      });
+      const messageId = await sendDiscordEmbed(defaultImage);
+      updateDiscordEmbedWithPreview(messageId);
       markDiscordNotified();
-      console.log("[DISCORD] 📢 Notification envoyée !");
+      console.log("[DISCORD] 📢 Notification envoyée + mise à jour prévue !");
     } else {
       console.log("[DISCORD] ⚠️ Déjà notifié → Pas de doublon.");
     }
@@ -133,8 +201,8 @@ async function checkKickLive() {
     await publierTweetLiveKick();
   }
   else if (!isLive && lastStatus) {
-    resetDiscordMemory(); // reset Discord
-    resetTweetMemory();   // reset Twitter
+    resetDiscordMemory();
+    resetTweetMemory();
   }
 
   lastStatus = isLive;
