@@ -33,7 +33,7 @@ const client = new Client({
 const commands = new Map<string, any>();
 const commandFiles = fs
   .readdirSync(path.join(__dirname, 'commands'))
-  .filter((file: string) => file.endsWith('.ts'));
+  .filter((file: string) => file.endsWith('.js'));
 
 for (const file of commandFiles) {
   const command = await import(`./commands/${file}`);
@@ -45,7 +45,7 @@ for (const file of commandFiles) {
 
 // --- Chargement dynamique des événements ---
 const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter((file: string) => file.endsWith('.ts'));
+const eventFiles = fs.readdirSync(eventsPath).filter((file: string) => file.endsWith('.js'));
 
 for (const file of eventFiles) {
   const event = await import(`./events/${file}`);
@@ -60,27 +60,32 @@ client.once('ready', () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 });
 
-// --- Gestion des messages & ping ---
 client.on(Events.MessageCreate, async (message: Message) => {
   if (message.author.bot) return;
 
+  console.log(`📨 Message reçu : ${message.content}`);
+
   // --- Commandes ---
-if (message.content.startsWith(PREFIX)) {
-  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-  const commandName = args.shift()?.toLowerCase();
+  if (message.content.startsWith(PREFIX)) {
+    const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+    const commandName = args.shift()?.toLowerCase();
 
-  if (!commandName) return; // ← sécurisation ici
+    console.log(`🔍 Commande détectée : ${commandName}`);
 
-  const command = commands.get(commandName);
-  if (command) {
-    try {
-      await command.execute(message, args);
-    } catch (err) {
-      console.error(`Erreur avec la commande ${commandName}:`, err);
-      message.reply("🤕 Le Tavernier s’est pris les pieds dans le tapis...");
+    if (!commandName) return;
+
+    const command = commands.get(commandName);
+    console.log(`📦 Commande trouvée ? ${command ? "Oui" : "Non"}`);
+
+    if (command) {
+      try {
+        await command.execute(message, args);
+      } catch (err) {
+        console.error(`Erreur avec la commande ${commandName}:`, err);
+        message.reply("🤕 Le Tavernier s’est pris les pieds dans le tapis...");
+      }
     }
   }
-}
 
   // --- Réponse au ping ---
   if (client.user && message.mentions.has(client.user)) {
