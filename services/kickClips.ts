@@ -47,7 +47,7 @@ async function checkKickClips(client: Client) {
 
     const $ = cheerio.load(html);
 
-    // Kick encode les infos clips dans des scripts JSON → on les récupère
+    // Kick encode les infos clips dans un script JSON → on le récupère
     const jsonData = $('script#__NEXT_DATA__').html();
     if (!jsonData) return;
 
@@ -92,6 +92,10 @@ async function checkKickClips(client: Client) {
       }
     }
   } catch (err) {
-    console.error("❌ Erreur récupération clips Kick :", err.message);
+    if (err instanceof Error) {
+      console.error("❌ Erreur récupération clips Kick :", err.message);
+    } else {
+      console.error("❌ Erreur récupération clips Kick :", err);
+    }
   }
 }
