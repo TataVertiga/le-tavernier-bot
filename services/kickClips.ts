@@ -13,7 +13,7 @@ let clipCheckInterval: NodeJS.Timeout | null = null;
 let currentInterval = 5 * 60 * 1000; // 5 min par défaut
 
 export async function initKickClips(client: Client) {
-  console.log("🎞 Surveillance des clips KickBot activée...");
+  console.log("🎞 Surveillance des clips (KickBot + Kick) activée...");
   startClipCheck(client, currentInterval);
 }
 
@@ -33,44 +33,30 @@ export async function updateClipCheckFrequency(client: Client, isLive: boolean) 
 
 async function checkKickClips(client: Client) {
   try {
-    const url = `https://www.kickbot.com/clips/${process.env.KICK_USERNAME}`;
-    const { data: html } = await axios.get(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-        "Accept": "text/html"
-      }
-    });
+    let clipData = await getFromKickBot();
 
-    const $ = cheerio.load(html);
+    // Si KickBot ne donne rien → fallback sur Kick direct
+    if (!clipData) {
+      console.warn("⚠️ KickBot indisponible → fallback sur Kick direct");
+      clipData = await getFromKickDirect();
+    }
 
-    // Chaque clip est dans un bloc <a href="/clip/...">
-    const firstClipElement = $("a[href^='/clip/']").first();
-    if (!firstClipElement.length) return;
+    if (!clipData) return; // toujours rien trouvé
 
-    const clipPath = firstClipElement.attr("href");
-    const clipUrl = `https://www.kickbot.com${clipPath}`;
-    const thumbnail = firstClipElement.find("img").attr("src") || "https://kick.com/favicon.ico";
-    const title = firstClipElement.find("h3").text().trim() || "Clip sans titre";
-
-    // Récupère l'auteur si dispo
-    const author = firstClipElement.find(".clip-author").text().trim() || "Inconnu";
-
-    // Évite les doublons
     const lastClipId = fs.existsSync(lastClipFile)
       ? JSON.parse(fs.readFileSync(lastClipFile, "utf8")).url
       : null;
 
-    if (clipUrl !== lastClipId) {
+    if (clipData.url !== lastClipId) {
       const channel = client.channels.cache.get("926619311613804544") as TextChannel;
       if (channel) {
         const embed = new EmbedBuilder()
           .setColor(0x00ff00)
-          .setTitle(`🎬 ${title}`)
-          .setURL(clipUrl)
-          .setImage(thumbnail)
+          .setTitle(`🎬 ${clipData.title}`)
+          .setURL(clipData.url)
+          .setImage(clipData.thumbnail)
           .setDescription(`Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
-**Auteur :** ${author}`)
+**Auteur :** ${clipData.author}`)
           .setFooter({
             text: "Le Tavernier • Clip Kick",
             iconURL: "https://kick.com/favicon.ico"
@@ -81,19 +67,75 @@ async function checkKickClips(client: Client) {
           new ButtonBuilder()
             .setLabel("▶️ Voir le clip")
             .setStyle(ButtonStyle.Link)
-            .setURL(clipUrl)
+            .setURL(clipData.url)
         );
 
         await channel.send({ embeds: [embed], components: [row] });
-        fs.writeFileSync(lastClipFile, JSON.stringify({ url: clipUrl }));
-        console.log(`✅ Clip posté (KickBot) : ${title}`);
+        fs.writeFileSync(lastClipFile, JSON.stringify({ url: clipData.url }));
+        console.log(`✅ Clip posté : ${clipData.title}`);
       }
     }
   } catch (err) {
     if (err instanceof Error) {
-      console.error("❌ Erreur récupération clips KickBot :", err.message);
+      console.error("❌ Erreur récupération clips :", err.message);
     } else {
-      console.error("❌ Erreur récupération clips KickBot :", err);
+      console.error("❌ Erreur récupération clips :", err);
     }
+  }
+}
+
+/**
+ * 📌 Méthode 1 : KickBot
+ */
+async function getFromKickBot() {
+  try {
+    const url = `https://www.kickbot.com/clips/${process.env.KICK_USERNAME}`;
+    const { data: html } = await axios.get(url, {
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
+
+    const $ = cheerio.load(html);
+    const firstClipElement = $("a[href^='/clip/']").first();
+    if (!firstClipElement.length) return null;
+
+    const clipPath = firstClipElement.attr("href");
+    const clipUrl = `https://www.kickbot.com${clipPath}`;
+    const thumbnail = firstClipElement.find("img").attr("src") || "https://kick.com/favicon.ico";
+    const title = firstClipElement.find("h3").text().trim() || "Clip sans titre";
+    const author = firstClipElement.find(".clip-author").text().trim() || "Inconnu";
+
+    return { url: clipUrl, thumbnail, title, author };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 📌 Méthode 2 : Kick direct (fallback)
+ */
+async function getFromKickDirect() {
+  try {
+    const url = `https://kick.com/${process.env.KICK_USERNAME}?tab=clips`;
+    const { data: html } = await axios.get(url, {
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
+
+    const $ = cheerio.load(html);
+    const jsonData = $('script#__NEXT_DATA__').html();
+    if (!jsonData) return null;
+
+    const parsed = JSON.parse(jsonData);
+    const clips = parsed.props.pageProps.data.clips || [];
+    if (clips.length === 0) return null;
+
+    const latestClip = clips[0];
+    const clipUrl = `https://kick.com/${process.env.KICK_USERNAME}/clip/${latestClip.slug}`;
+    const thumbnail = latestClip.thumbnail?.url || "https://kick.com/favicon.ico";
+    const title = latestClip.title || "Clip sans titre";
+    const author = latestClip.created_by?.username || "Inconnu";
+
+    return { url: clipUrl, thumbnail, title, author };
+  } catch {
+    return null;
   }
 }
