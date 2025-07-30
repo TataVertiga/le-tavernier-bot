@@ -5,6 +5,8 @@ import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, But
 import dotenv from "dotenv";
 dotenv.config();
 
+console.log("[YOUTUBE] 🛠 Version 1.0.1 - Sécurisation includes OK");
+
 if (!process.env.CHANNEL_ID) throw new Error("[YOUTUBE] ❌ CHANNEL_ID manquant dans le .env");
 const DISCORD_CHANNEL_ID = process.env.CHANNEL_ID!;
 const YT_API = process.env.YOUTUBE_API_KEY!;

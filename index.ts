@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { initKick } from './services/kick.js';
 import { initKickClips } from './services/kickClips.js';
-import { checkYoutube } from './services/youtube.js'; // ✅ YouTube
+import { checkYoutube } from './services/youtube.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
