@@ -57,6 +57,9 @@ for (const file of eventFiles) {
 // --- Initialisation ---
 client.once('ready', () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
+
+  // 🚀 Lancement de la détection Kick uniquement quand le bot est prêt
+  initKick();
 });
 
 // --- Gestion des messages & ping ---
@@ -121,6 +124,3 @@ client.on(Events.MessageCreate, async (message: Message) => {
 });
 
 client.login(process.env.TOKEN);
-
-// --- Initialisation des services ---
-initKick();
