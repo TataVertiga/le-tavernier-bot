@@ -9,14 +9,17 @@ let kickToken = "";
 // ✅ Fichier pour éviter double notif Discord
 const lastDiscordFile = path.join(process.cwd(), 'last_discord.json');
 
-// ✅ Image RP fixe (toujours affichée)
+// ✅ Image RP fixe
 const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; 
 
-// ✅ Type exact de la réponse Kick
+// ✅ Type réponse Kick
 type KickResponse = {
   data: {
     slug: string;
-    livestream: {
+    stream?: {
+      is_live: boolean;
+    } | null;
+    livestream?: {
       is_live: boolean;
     } | null;
   }[];
@@ -73,7 +76,7 @@ async function getKickToken(): Promise<KickTokenBody> {
   return response.json();
 }
 
-// --- Envoi embed Discord avec bouton RP + lien dans l'embed ---
+// --- Envoi embed Discord ---
 async function sendDiscordEmbed() {
   await axios.post(
     `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`,
@@ -95,11 +98,11 @@ Les pintes se remplissent et la musique résonne.
       ],
       components: [
         {
-          type: 1, // ActionRow
+          type: 1,
           components: [
             {
-              type: 2, // Button
-              style: 5, // Link Button
+              type: 2,
+              style: 5,
               label: "🍺 Entrer dans la taverne",
               url: `https://kick.com/${process.env.KICK_USERNAME}`
             }
@@ -110,7 +113,7 @@ Les pintes se remplissent et la musique résonne.
     { headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, "Content-Type": "application/json" } }
   );
 
-  console.log("[DISCORD] 📢 Notification envoyée avec lien + bouton RP !");
+  console.log("[DISCORD] 📢 Notification envoyée !");
 }
 
 // --- Vérification live Kick ---
@@ -136,7 +139,10 @@ async function checkKickLive() {
   // --- DEBUG complet ---
   console.log("[DEBUG] Réponse Kick brute :", JSON.stringify(data, null, 2));
 
-  let isLive = data.data[0]?.livestream?.is_live ?? false;
+  // 📌 Nouvelle lecture compatible avec les deux formats API
+  let isLive = data.data[0]?.stream?.is_live 
+            ?? data.data[0]?.livestream?.is_live 
+            ?? false;
 
   // Mode debug
   if (process.env.DEBUG_KICK_MODE === "LIVE") {
@@ -157,7 +163,6 @@ async function checkKickLive() {
     if (!alreadyNotifiedDiscord()) {
       await sendDiscordEmbed();
       markDiscordNotified();
-      console.log("[DISCORD] 📢 Notification envoyée !");
     } else {
       console.log("[DISCORD] ⚠️ Déjà notifié → Pas de doublon.");
     }
