@@ -2,6 +2,8 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { publierTweetLiveKick, resetTweetMemory } from './twitter.js';
+import { updateClipCheckFrequency } from "./kickClips.js";
+import type { Client } from "discord.js";
 
 let lastStatus = false;
 let kickToken = "";
@@ -16,12 +18,8 @@ const defaultImage = "https://i.imgur.com/8Q2mpgI.png";
 type KickResponse = {
   data: {
     slug: string;
-    stream?: {
-      is_live: boolean;
-    } | null;
-    livestream?: {
-      is_live: boolean;
-    } | null;
+    stream?: { is_live: boolean } | null;
+    livestream?: { is_live: boolean } | null;
   }[];
 };
 
@@ -115,7 +113,7 @@ Les pintes se remplissent et la musique résonne.
 }
 
 // --- Vérification live Kick ---
-async function checkKickLive() {
+async function checkKickLive(client: Client) {
   console.log("[KICK] 📡 Vérification de l'état du live...");
 
   const response = await fetch(`https://api.kick.com/public/v1/channels?slug=${process.env.KICK_USERNAME}`, {
@@ -126,10 +124,10 @@ async function checkKickLive() {
   if (response.status == 401) {
     console.log("[KICK] ♻️ Token expiré → Rafraîchissement...");
     kickToken = (await getKickToken()).access_token;
-    return checkKickLive();
+    return checkKickLive(client);
   } else if (response.status != 200) {
     console.error(`[KICK] ❌ Erreur API : ${response.status}`);
-    return setTimeout(checkKickLive, 30000);
+    return setTimeout(() => checkKickLive(client), 30000);
   }
 
   const data: KickResponse = await response.json();
@@ -139,12 +137,12 @@ async function checkKickLive() {
             ?? data.data[0]?.livestream?.is_live 
             ?? false;
 
-  // 🔍 Affiche la réponse brute seulement si DEBUG_KICK_LOGS=true
+  // 🔍 Debug logs si activé
   if (process.env.DEBUG_KICK_LOGS === "true") {
     console.log("[DEBUG] Réponse Kick brute :", JSON.stringify(data, null, 2));
   }
 
-  // Mode debug forcé
+  // 🎯 Mode debug forcé
   if (process.env.DEBUG_KICK_MODE === "LIVE") {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation début de live");
     isLive = true;
@@ -157,6 +155,10 @@ async function checkKickLive() {
 
   console.log(`[KICK] 🎥 isLive: ${isLive}`);
 
+  // ⚡ Ajuste la fréquence de vérif des clips Kick
+  updateClipCheckFrequency(client, isLive);
+
+  // 📢 Notifications si début de live
   if (isLive && !lastStatus) {
     console.log("[KICK] ✅ Live détecté → Envoi notifications...");
 
@@ -168,18 +170,20 @@ async function checkKickLive() {
     }
 
     await publierTweetLiveKick();
-  } else if (!isLive && lastStatus) {
+  } 
+  // 📴 Fin de live
+  else if (!isLive && lastStatus) {
     resetDiscordMemory();
     resetTweetMemory();
   }
 
   lastStatus = isLive;
-  setTimeout(checkKickLive, 60000);
+  setTimeout(() => checkKickLive(client), 60000);
 }
 
 // --- Initialisation Kick ---
-export async function initKick() {
+export async function initKick(client: Client) {
   console.log("[KICK] 🚀 Initialisation du système de détection...");
   kickToken = (await getKickToken()).access_token;
-  checkKickLive();
+  checkKickLive(client);
 }

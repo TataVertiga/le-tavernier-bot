@@ -6,6 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { initKick } from './services/kick.js';
+import { initKickClips } from './services/kickClips.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,8 +59,9 @@ for (const file of eventFiles) {
 client.once('ready', () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 
-  // 🚀 Lancement de la détection Kick uniquement quand le bot est prêt
-  initKick();
+  // 🚀 Lancement des systèmes Kick
+  initKick(client);       // Détection live Kick + ajustement clips
+  initKickClips(client);  // Surveillance automatique des clips
 });
 
 // --- Gestion des messages & ping ---
