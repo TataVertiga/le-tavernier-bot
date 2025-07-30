@@ -3,13 +3,14 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import * as cheerio from "cheerio";
 import dotenv from "dotenv";
 dotenv.config();
 
 const lastClipFile = path.join(process.cwd(), "last_kick_clip.json");
 
 let clipCheckInterval: NodeJS.Timeout | null = null;
-let currentInterval = 5 * 60 * 1000;
+let currentInterval = 5 * 60 * 1000; // 5 min par défaut
 
 export async function initKickClips(client: Client) {
   console.log("🎞 Surveillance des clips Kick activée...");
@@ -32,12 +33,30 @@ export async function updateClipCheckFrequency(client: Client, isLive: boolean) 
 
 async function checkKickClips(client: Client) {
   try {
-    const url = `https://kick.com/api/v2/channels/${process.env.KICK_USERNAME}/clips`;
-    const { data } = await axios.get(url);
+    const url = `https://kick.com/${process.env.KICK_USERNAME}?tab=clips`;
 
-    if (!Array.isArray(data) || data.length === 0) return;
+    // Imitation d’un vrai navigateur
+    const { data: html } = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+        "Accept": "text/html",
+        "Referer": `https://kick.com/${process.env.KICK_USERNAME}`
+      }
+    });
 
-    const latestClip = data[0];
+    const $ = cheerio.load(html);
+
+    // Kick encode les infos clips dans des scripts JSON → on les récupère
+    const jsonData = $('script#__NEXT_DATA__').html();
+    if (!jsonData) return;
+
+    const parsed = JSON.parse(jsonData);
+    const clips = parsed.props.pageProps.data.clips || [];
+
+    if (clips.length === 0) return;
+
+    const latestClip = clips[0];
     const lastClipId = fs.existsSync(lastClipFile)
       ? JSON.parse(fs.readFileSync(lastClipFile, "utf8")).id
       : null;
@@ -47,13 +66,12 @@ async function checkKickClips(client: Client) {
       const channel = client.channels.cache.get("926619311613804544") as TextChannel;
 
       if (channel) {
-        // 📌 Création de l'embed
         const embed = new EmbedBuilder()
           .setColor(0x00ff00)
           .setTitle(`🎬 ${latestClip.title}`)
           .setURL(clipUrl)
-          .setImage(latestClip.thumbnail?.url || latestClip.thumbnail || "https://kick.com/favicon.ico")
-          .setDescription(`Un moment épique vient d'être immortalisé sur **Kick** ! ⚔️  
+          .setImage(latestClip.thumbnail?.url || "https://kick.com/favicon.ico")
+          .setDescription(`Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
 **Auteur :** ${latestClip.created_by?.username || "Inconnu"}`)
           .setFooter({
             text: "Le Tavernier • Clip Kick",
@@ -61,7 +79,6 @@ async function checkKickClips(client: Client) {
           })
           .setTimestamp();
 
-        // 📌 Bouton Discord cliquable
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
             .setLabel("▶️ Voir le clip")
@@ -71,10 +88,10 @@ async function checkKickClips(client: Client) {
 
         await channel.send({ embeds: [embed], components: [row] });
         fs.writeFileSync(lastClipFile, JSON.stringify({ id: latestClip.id }));
-        console.log(`✅ Clip posté (embed + bouton) : ${latestClip.title}`);
+        console.log(`✅ Clip posté (scraper) : ${latestClip.title}`);
       }
     }
   } catch (err) {
-    console.error("❌ Erreur récupération clips Kick :", err);
+    console.error("❌ Erreur récupération clips Kick :", err.message);
   }
 }

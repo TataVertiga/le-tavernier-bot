@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.10.0",
+    "cheerio": "^1.1.2",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
@@ -20,6 +21,7 @@
     "twitter-api-v2": "^1.24.0"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.35",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.3",
     "@types/node": "^22.16.5",
