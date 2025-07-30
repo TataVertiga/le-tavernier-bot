@@ -13,7 +13,7 @@ let clipCheckInterval: NodeJS.Timeout | null = null;
 let currentInterval = 5 * 60 * 1000; // 5 min par défaut
 
 export async function initKickClips(client: Client) {
-  console.log("🎞 Surveillance des clips (KickBot + Kick) activée...");
+  console.log("[CLIPS] 🎞 Surveillance des clips (KickBot + Kick) activée...");
   startClipCheck(client, currentInterval);
 }
 
@@ -26,7 +26,7 @@ export async function updateClipCheckFrequency(client: Client, isLive: boolean) 
   const newInterval = isLive ? 30 * 1000 : 5 * 60 * 1000;
   if (newInterval !== currentInterval) {
     currentInterval = newInterval;
-    console.log(`⏱ Fréquence vérification clips : ${isLive ? "30 sec" : "5 min"}`);
+    console.log(`[CLIPS] ⏱ Fréquence vérification clips : ${isLive ? "30 sec" : "5 min"}`);
     startClipCheck(client, currentInterval);
   }
 }
@@ -37,12 +37,12 @@ async function checkKickClips(client: Client) {
 
     // Si KickBot ne donne rien → fallback sur Kick direct
     if (!clipData) {
-      console.warn("⚠️ KickBot indisponible → fallback sur Kick direct");
+      console.warn("[CLIPS] ⚠️ KickBot indisponible → fallback sur Kick direct");
       clipData = await getFromKickDirect();
     }
 
     if (!clipData) {
-      console.log("⏩ Aucun clip trouvé.");
+      console.log("[CLIPS] ⏩ Aucun clip trouvé.");
       return;
     }
 
@@ -51,7 +51,7 @@ async function checkKickClips(client: Client) {
       : null;
 
     if (clipData.url !== lastClipId) {
-      console.log(`✅ Nouveau clip détecté : ${clipData.title}`);
+      console.log(`[CLIPS] ✅ Nouveau clip détecté : ${clipData.title}`);
 
       const channel = client.channels.cache.get("926619311613804544") as TextChannel;
       if (channel) {
@@ -77,16 +77,16 @@ async function checkKickClips(client: Client) {
 
         await channel.send({ embeds: [embed], components: [row] });
         fs.writeFileSync(lastClipFile, JSON.stringify({ url: clipData.url }));
-        console.log(`📤 Clip publié sur Discord : ${clipData.title}`);
+        console.log(`[CLIPS] 📤 Clip publié sur Discord : ${clipData.title}`);
       }
     } else {
-      console.log("⏩ Aucun nouveau clip détecté.");
+      console.log("[CLIPS] ⏩ Aucun nouveau clip détecté.");
     }
   } catch (err) {
     if (err instanceof Error) {
-      console.error("❌ Erreur récupération clips :", err.message);
+      console.error("[CLIPS] ❌ Erreur récupération clips :", err.message);
     } else {
-      console.error("❌ Erreur récupération clips :", err);
+      console.error("[CLIPS] ❌ Erreur récupération clips :", err);
     }
   }
 }
