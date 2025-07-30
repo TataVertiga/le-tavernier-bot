@@ -1,3 +1,4 @@
+// services/youtube.ts
 import axios from "axios";
 import fs from "fs";
 import path from "path";
@@ -51,20 +52,23 @@ export async function checkYoutube(client: Client) {
     let newVideo: any = null;
 
     for (const video of videos) {
-      const videoId = video.id.videoId;
+      const videoId = video.id?.videoId;
+      if (!videoId) continue;
 
       // 📌 Ignorer si déjà annoncé
       if (lastData.lastIds.includes(videoId)) continue;
 
       const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,liveStreamingDetails&key=${YT_API}&id=${videoId}`;
       const detailsRes = await axios.get(detailsUrl);
-      const info = detailsRes.data.items[0];
+      const info = detailsRes.data.items?.[0];
       if (!info) continue;
 
-      const liveStatus = info.snippet.liveBroadcastContent;
-      const title = info.snippet.title.toLowerCase();
-      const duration = info.contentDetails.duration;
-      const publishedAt = info.snippet.publishedAt;
+      const title = info?.snippet?.title?.toLowerCase() || "";
+      if (!title) continue; // si pas de titre → on ignore
+
+      const liveStatus = info?.snippet?.liveBroadcastContent || "none";
+      const duration = info?.contentDetails?.duration || "";
+      const publishedAt = info?.snippet?.publishedAt || "";
 
       // 🚫 Ignorer lives & premières
       if (liveStatus !== "none") continue;
@@ -126,7 +130,7 @@ export async function checkYoutube(client: Client) {
     );
 
     await channel.send({ embeds: [embed], components: [button] });
-    console.log("[YOUTUBE] 📢 Nouvelle vidéo annoncée !");
+    console.log("[YOUTUBE] 📢 Nouvelle vidéo YouTube annoncée !");
   } catch (err: unknown) {
     if (err instanceof Error) {
       console.error("[YOUTUBE] ❌ Erreur API :", err.message);
