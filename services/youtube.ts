@@ -5,7 +5,7 @@ import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, But
 import dotenv from "dotenv";
 dotenv.config();
 
-console.log("[YOUTUBE] 🛠 Version 1.0.1 - Sécurisation includes OK");
+console.log("[YOUTUBE] 🛠 Version 1.0.2 - Protection includes partout");
 
 if (!process.env.CHANNEL_ID) throw new Error("[YOUTUBE] ❌ CHANNEL_ID manquant dans le .env");
 const DISCORD_CHANNEL_ID = process.env.CHANNEL_ID!;
@@ -71,9 +71,9 @@ export async function checkYoutube(client: Client) {
       const duration = info?.contentDetails?.duration || "";
       const publishedAt = info?.snippet?.publishedAt || "";
 
-      // 🚫 Ignorer lives & premières
+      // 🚫 Ignorer lives & premières (protection includes)
       if (liveStatus !== "none") continue;
-      if (["live", "direct", "premiere"].some(keyword => title.includes(keyword))) continue;
+      if (["live", "direct", "premiere"].some(keyword => (title || "").includes(keyword))) continue;
 
       // 📌 Ignorer si plus vieux que dernière vidéo annoncée
       if (lastData.lastDate && new Date(publishedAt) < new Date(lastData.lastDate)) continue;
@@ -85,9 +85,9 @@ export async function checkYoutube(client: Client) {
       const totalSeconds = minutes * 60 + seconds;
 
       if (totalSeconds <= 60) {
-        console.log(`[YOUTUBE] ✅ Short détecté : ${info.snippet.title}`);
+        console.log(`[YOUTUBE] ✅ Short détecté : ${info?.snippet?.title || "Sans titre"}`);
       } else {
-        console.log(`[YOUTUBE] ✅ Vidéo détectée : ${info.snippet.title}`);
+        console.log(`[YOUTUBE] ✅ Vidéo détectée : ${info?.snippet?.title || "Sans titre"}`);
       }
 
       newVideo = info;
@@ -100,7 +100,7 @@ export async function checkYoutube(client: Client) {
     }
 
     // 📌 Sauvegarde historique
-    saveLastData(newVideo.id, newVideo.snippet.publishedAt);
+    saveLastData(newVideo.id, newVideo.snippet?.publishedAt || "");
 
     // 📢 Publication Discord
     const channel = client.channels.cache.get(DISCORD_CHANNEL_ID) as TextChannel;
@@ -115,11 +115,11 @@ export async function checkYoutube(client: Client) {
         name: "📺 Nouvelle vidéo à la Taverne !",
         iconURL: "https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png",
       })
-      .setTitle(newVideo.snippet.title)
+      .setTitle(newVideo.snippet?.title || "Sans titre")
       .setURL(`https://youtu.be/${newVideo.id}`)
       .setDescription(`🍺 Ô gueux ! Tata Vertiga vient de servir un nouveau tonneau visuel à la Taverne !  
 [**Clique ici pour voir la cuvée**](https://youtu.be/${newVideo.id}) avant que ça se réchauffe !`)
-      .setImage(newVideo.snippet.thumbnails.maxres?.url || newVideo.snippet.thumbnails.high.url)
+      .setImage(newVideo.snippet?.thumbnails?.maxres?.url || newVideo.snippet?.thumbnails?.high?.url)
       .setFooter({ text: "Le Tavernier vous sert en continu" })
       .setTimestamp();
 
