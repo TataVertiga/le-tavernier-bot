@@ -139,7 +139,12 @@ async function checkKickLive() {
             ?? data.data[0]?.livestream?.is_live 
             ?? false;
 
-  // Mode debug
+  // 🔍 Affiche la réponse brute seulement si DEBUG_KICK_LOGS=true
+  if (process.env.DEBUG_KICK_LOGS === "true") {
+    console.log("[DEBUG] Réponse Kick brute :", JSON.stringify(data, null, 2));
+  }
+
+  // Mode debug forcé
   if (process.env.DEBUG_KICK_MODE === "LIVE") {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation début de live");
     isLive = true;
