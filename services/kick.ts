@@ -1,20 +1,16 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { publierTweetLiveKick, resetTweetMemory } from './twitter.js';
+import { publierTweetLiveKick, resetTweetMemory } from "./twitter.js";
 import { updateClipCheckFrequency } from "./kickClips.js";
 import type { Client } from "discord.js";
 
 let lastStatus = false;
 let kickToken = "";
 
-// ✅ Fichier pour éviter double notif Discord
-const lastDiscordFile = path.join(process.cwd(), 'last_discord.json');
+const lastDiscordFile = path.join(process.cwd(), "last_discord.json");
+const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; // Image RP fixe
 
-// ✅ Image RP fixe
-const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; 
-
-// ✅ Type réponse Kick
 type KickResponse = {
   data: {
     slug: string;
@@ -29,11 +25,11 @@ type KickTokenBody = {
   token_type: string;
 };
 
-// --- Fonctions anti-doublon Discord ---
+// --- Anti-doublon Discord ---
 function alreadyNotifiedDiscord(): boolean {
   if (fs.existsSync(lastDiscordFile)) {
     try {
-      const data = JSON.parse(fs.readFileSync(lastDiscordFile, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(lastDiscordFile, "utf8"));
       if (data.liveId === process.env.KICK_USERNAME) return true;
     } catch {}
   }
@@ -60,8 +56,8 @@ async function getKickToken(): Promise<KickTokenBody> {
     body: new URLSearchParams({
       client_id: process.env.KICK_CLIENT_ID || "",
       client_secret: process.env.KICK_CLIENT_SECRET || "",
-      grant_type: "client_credentials"
-    })
+      grant_type: "client_credentials",
+    }),
   });
 
   if (response.status != 200) {
@@ -72,7 +68,7 @@ async function getKickToken(): Promise<KickTokenBody> {
   return response.json();
 }
 
-// --- Envoi embed Discord ---
+// --- Envoi embed Discord harmonisé ---
 async function sendDiscordEmbed() {
   await axios.post(
     `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`,
@@ -80,17 +76,19 @@ async function sendDiscordEmbed() {
       content: `🍺 Mortecouille bande de gueux ! Un live sauvage apparaît sur <@&881684792058466354> !`,
       embeds: [
         {
-          title: "⚔️ TATA LANCE UN LIVE SUR KICK !",
-          description: `**La taverne s’anime, les gueux s’agitent…**  
-Les pintes se remplissent et la musique résonne.  
-
-▶️ [**Clique ici pour rejoindre le live**](https://kick.com/${process.env.KICK_USERNAME})`,
-          color: 0x00ff00,
-          thumbnail: { url: "https://kick.com/favicon.ico" },
+          color: 0x00ff00, // 🍀 Vert Kick
+          author: {
+            name: "🎥 Live Kick à la Taverne !",
+            icon_url: "https://upload.wikimedia.org/wikipedia/commons/1/1e/Kick_logo.svg",
+          },
+          title: "⚔️ Tata Vertiga est en live !",
+          url: `https://kick.com/${process.env.KICK_USERNAME}`,
+          description: `🍺 Ô gueux ! La Taverne a ouvert ses portes et Tata Vertiga est déjà en train de beugler derrière le comptoir !  
+[**Rejoins la fête**](https://kick.com/${process.env.KICK_USERNAME}) et viens t'enfiler une pinte !`,
           image: { url: defaultImage },
-          footer: { text: "Le Tavernier • Live Kick Alert", icon_url: "https://kick.com/favicon.ico" },
-          timestamp: new Date().toISOString()
-        }
+          footer: { text: "Le Tavernier • Live Kick", icon_url: "https://upload.wikimedia.org/wikipedia/commons/1/1e/Kick_logo.svg" },
+          timestamp: new Date().toISOString(),
+        },
       ],
       components: [
         {
@@ -100,16 +98,21 @@ Les pintes se remplissent et la musique résonne.
               type: 2,
               style: 5,
               label: "🍺 Entrer dans la taverne",
-              url: `https://kick.com/${process.env.KICK_USERNAME}`
-            }
-          ]
-        }
-      ]
+              url: `https://kick.com/${process.env.KICK_USERNAME}`,
+            },
+          ],
+        },
+      ],
     },
-    { headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, "Content-Type": "application/json" } }
+    {
+      headers: {
+        Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    }
   );
 
-  console.log("[DISCORD] 📢 Notification envoyée !");
+  console.log("[DISCORD] 📢 Notification Kick envoyée !");
 }
 
 // --- Vérification live Kick ---
@@ -118,7 +121,7 @@ async function checkKickLive(client: Client) {
 
   const response = await fetch(`https://api.kick.com/public/v1/channels?slug=${process.env.KICK_USERNAME}`, {
     method: "GET",
-    headers: { "Authorization": "Bearer " + kickToken }
+    headers: { Authorization: "Bearer " + kickToken },
   });
 
   if (response.status == 401) {
@@ -131,18 +134,15 @@ async function checkKickLive(client: Client) {
   }
 
   const data: KickResponse = await response.json();
+  let isLive =
+    data.data[0]?.stream?.is_live ??
+    data.data[0]?.livestream?.is_live ??
+    false;
 
-  // 📌 Lecture compatible avec ancienne et nouvelle API Kick
-  let isLive = data.data[0]?.stream?.is_live 
-            ?? data.data[0]?.livestream?.is_live 
-            ?? false;
-
-  // 🔍 Debug logs si activé
   if (process.env.DEBUG_KICK_LOGS === "true") {
     console.log("[DEBUG] Réponse Kick brute :", JSON.stringify(data, null, 2));
   }
 
-  // 🎯 Mode debug forcé
   if (process.env.DEBUG_KICK_MODE === "LIVE") {
     console.log("[KICK] 🛠 Mode DEBUG → Simulation début de live");
     isLive = true;
@@ -155,10 +155,8 @@ async function checkKickLive(client: Client) {
 
   console.log(`[KICK] 🎥 isLive: ${isLive}`);
 
-  // ⚡ Ajuste la fréquence de vérif des clips Kick
   updateClipCheckFrequency(client, isLive);
 
-  // 📢 Notifications si début de live
   if (isLive && !lastStatus) {
     console.log("[KICK] ✅ Live détecté → Envoi notifications...");
 
@@ -170,9 +168,7 @@ async function checkKickLive(client: Client) {
     }
 
     await publierTweetLiveKick();
-  } 
-  // 📴 Fin de live
-  else if (!isLive && lastStatus) {
+  } else if (!isLive && lastStatus) {
     resetDiscordMemory();
     resetTweetMemory();
   }

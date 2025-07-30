@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { initKick } from './services/kick.js';
 import { initKickClips } from './services/kickClips.js';
+import { checkYoutube } from './services/youtube.js'; // ✅ YouTube
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -60,8 +61,12 @@ client.once('ready', () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 
   // 🚀 Lancement des systèmes Kick
-  initKick(client);       // Détection live Kick + ajustement clips
-  initKickClips(client);  // Surveillance automatique des clips
+  initKick(client);       // Détection live Kick
+  initKickClips(client);  // Surveillance des clips Kick
+
+  // 🚀 Surveillance YouTube toutes les 10 minutes
+  checkYoutube(client); // Lancement au démarrage
+  setInterval(() => checkYoutube(client), 10 * 60 * 1000);
 });
 
 // --- Gestion des messages & ping ---
