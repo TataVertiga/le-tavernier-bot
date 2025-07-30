@@ -1,4 +1,3 @@
-// services/youtube.ts
 import axios from "axios";
 import fs from "fs";
 import path from "path";
@@ -52,7 +51,7 @@ export async function checkYoutube(client: Client) {
     let newVideo: any = null;
 
     for (const video of videos) {
-      const videoId = video.id?.videoId;
+      const videoId = video?.id?.videoId;
       if (!videoId) continue;
 
       // 📌 Ignorer si déjà annoncé
@@ -64,7 +63,7 @@ export async function checkYoutube(client: Client) {
       if (!info) continue;
 
       const title = info?.snippet?.title?.toLowerCase() || "";
-      if (!title) continue; // si pas de titre → on ignore
+      if (!title) continue; // Ignore si pas de titre
 
       const liveStatus = info?.snippet?.liveBroadcastContent || "none";
       const duration = info?.contentDetails?.duration || "";
@@ -72,7 +71,7 @@ export async function checkYoutube(client: Client) {
 
       // 🚫 Ignorer lives & premières
       if (liveStatus !== "none") continue;
-      if (title.includes("live") || title.includes("direct") || title.includes("premiere")) continue;
+      if (["live", "direct", "premiere"].some(keyword => title.includes(keyword))) continue;
 
       // 📌 Ignorer si plus vieux que dernière vidéo annoncée
       if (lastData.lastDate && new Date(publishedAt) < new Date(lastData.lastDate)) continue;
