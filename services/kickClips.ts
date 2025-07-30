@@ -13,7 +13,7 @@ let clipCheckInterval: NodeJS.Timeout | null = null;
 let currentInterval = 5 * 60 * 1000; // 5 min par défaut
 
 export async function initKickClips(client: Client) {
-  console.log("🎞 Surveillance des clips Kick activée...");
+  console.log("🎞 Surveillance des clips KickBot activée...");
   startClipCheck(client, currentInterval);
 }
 
@@ -33,46 +33,44 @@ export async function updateClipCheckFrequency(client: Client, isLive: boolean) 
 
 async function checkKickClips(client: Client) {
   try {
-    const url = `https://kick.com/${process.env.KICK_USERNAME}?tab=clips`;
-
-    // Imitation d’un vrai navigateur
+    const url = `https://www.kickbot.com/clips/${process.env.KICK_USERNAME}`;
     const { data: html } = await axios.get(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-        "Accept": "text/html",
-        "Referer": `https://kick.com/${process.env.KICK_USERNAME}`
+        "Accept": "text/html"
       }
     });
 
     const $ = cheerio.load(html);
 
-    // Kick encode les infos clips dans un script JSON → on le récupère
-    const jsonData = $('script#__NEXT_DATA__').html();
-    if (!jsonData) return;
+    // Chaque clip est dans un bloc <a href="/clip/...">
+    const firstClipElement = $("a[href^='/clip/']").first();
+    if (!firstClipElement.length) return;
 
-    const parsed = JSON.parse(jsonData);
-    const clips = parsed.props.pageProps.data.clips || [];
+    const clipPath = firstClipElement.attr("href");
+    const clipUrl = `https://www.kickbot.com${clipPath}`;
+    const thumbnail = firstClipElement.find("img").attr("src") || "https://kick.com/favicon.ico";
+    const title = firstClipElement.find("h3").text().trim() || "Clip sans titre";
 
-    if (clips.length === 0) return;
+    // Récupère l'auteur si dispo
+    const author = firstClipElement.find(".clip-author").text().trim() || "Inconnu";
 
-    const latestClip = clips[0];
+    // Évite les doublons
     const lastClipId = fs.existsSync(lastClipFile)
-      ? JSON.parse(fs.readFileSync(lastClipFile, "utf8")).id
+      ? JSON.parse(fs.readFileSync(lastClipFile, "utf8")).url
       : null;
 
-    if (latestClip.id !== lastClipId) {
-      const clipUrl = `https://kick.com/${process.env.KICK_USERNAME}/clip/${latestClip.slug}`;
+    if (clipUrl !== lastClipId) {
       const channel = client.channels.cache.get("926619311613804544") as TextChannel;
-
       if (channel) {
         const embed = new EmbedBuilder()
           .setColor(0x00ff00)
-          .setTitle(`🎬 ${latestClip.title}`)
+          .setTitle(`🎬 ${title}`)
           .setURL(clipUrl)
-          .setImage(latestClip.thumbnail?.url || "https://kick.com/favicon.ico")
+          .setImage(thumbnail)
           .setDescription(`Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
-**Auteur :** ${latestClip.created_by?.username || "Inconnu"}`)
+**Auteur :** ${author}`)
           .setFooter({
             text: "Le Tavernier • Clip Kick",
             iconURL: "https://kick.com/favicon.ico"
@@ -87,15 +85,15 @@ async function checkKickClips(client: Client) {
         );
 
         await channel.send({ embeds: [embed], components: [row] });
-        fs.writeFileSync(lastClipFile, JSON.stringify({ id: latestClip.id }));
-        console.log(`✅ Clip posté (scraper) : ${latestClip.title}`);
+        fs.writeFileSync(lastClipFile, JSON.stringify({ url: clipUrl }));
+        console.log(`✅ Clip posté (KickBot) : ${title}`);
       }
     }
   } catch (err) {
     if (err instanceof Error) {
-      console.error("❌ Erreur récupération clips Kick :", err.message);
+      console.error("❌ Erreur récupération clips KickBot :", err.message);
     } else {
-      console.error("❌ Erreur récupération clips Kick :", err);
+      console.error("❌ Erreur récupération clips KickBot :", err);
     }
   }
 }
