@@ -1,48 +1,60 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { Client, EmbedBuilder, TextChannel } from "discord.js";
+import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-if (!process.env.CHANNEL_ID) throw new Error("❌ CHANNEL_ID manquant dans le .env");
+if (!process.env.CHANNEL_ID) throw new Error("[YOUTUBE] ❌ CHANNEL_ID manquant dans le .env");
 const DISCORD_CHANNEL_ID = process.env.CHANNEL_ID!;
 const YT_API = process.env.YOUTUBE_API_KEY!;
 const YT_CHANNEL = process.env.YOUTUBE_CHANNEL_ID!;
 
 const lastFile = path.join(process.cwd(), "data", "last_youtube.json");
 
-function getLastId(): string | null {
+type LastData = { lastIds: string[]; lastDate?: string };
+
+function getLastData(): LastData {
   if (fs.existsSync(lastFile)) {
     try {
-      const data = JSON.parse(fs.readFileSync(lastFile, "utf8"));
-      return data.lastId || null;
+      return JSON.parse(fs.readFileSync(lastFile, "utf8")) as LastData;
     } catch {
-      return null;
+      return { lastIds: [] };
     }
   }
-  return null;
+  return { lastIds: [] };
 }
 
-function saveLastId(id: string) {
+function saveLastData(videoId: string, publishedAt: string) {
+  let data = getLastData();
+  if (!data.lastIds) data.lastIds = [];
+  data.lastIds.unshift(videoId);
+  data.lastIds = data.lastIds.slice(0, 10);
+  data.lastDate = publishedAt;
   fs.mkdirSync(path.dirname(lastFile), { recursive: true });
-  fs.writeFileSync(lastFile, JSON.stringify({ lastId: id }, null, 2));
+  fs.writeFileSync(lastFile, JSON.stringify(data, null, 2));
 }
 
 export async function checkYoutube(client: Client) {
   try {
-    console.log("🔍 Vérification des nouvelles vidéos YouTube...");
+    console.log("[YOUTUBE] 🔍 Vérification des nouvelles vidéos...");
 
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YT_CHANNEL}&order=date&maxResults=5&type=video&key=${YT_API}`;
     const searchRes = await axios.get(searchUrl);
     const videos = searchRes.data.items;
-    if (!videos || videos.length === 0) return;
+    if (!videos || videos.length === 0) {
+      console.log("[YOUTUBE] ℹ️ Aucune vidéo trouvée dans l'API.");
+      return;
+    }
 
-    const lastId = getLastId();
+    const lastData = getLastData();
     let newVideo: any = null;
 
     for (const video of videos) {
       const videoId = video.id.videoId;
+
+      // 📌 Ignorer si déjà annoncé
+      if (lastData.lastIds.includes(videoId)) continue;
 
       const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,liveStreamingDetails&key=${YT_API}&id=${videoId}`;
       const detailsRes = await axios.get(detailsUrl);
@@ -52,67 +64,74 @@ export async function checkYoutube(client: Client) {
       const liveStatus = info.snippet.liveBroadcastContent;
       const title = info.snippet.title.toLowerCase();
       const duration = info.contentDetails.duration;
+      const publishedAt = info.snippet.publishedAt;
 
-      // 🚫 Ignorer les lives & premières
+      // 🚫 Ignorer lives & premières
       if (liveStatus !== "none") continue;
       if (title.includes("live") || title.includes("direct") || title.includes("premiere")) continue;
 
-      // Shorts = < 60 secondes → inclus
+      // 📌 Ignorer si plus vieux que dernière vidéo annoncée
+      if (lastData.lastDate && new Date(publishedAt) < new Date(lastData.lastDate)) continue;
+
+      // Shorts = < 60s → inclus
       const match = duration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
       const minutes = parseInt(match?.[1] || "0");
       const seconds = parseInt(match?.[2] || "0");
       const totalSeconds = minutes * 60 + seconds;
 
       if (totalSeconds <= 60) {
-        console.log(`✅ Short détecté : ${info.snippet.title}`);
+        console.log(`[YOUTUBE] ✅ Short détecté : ${info.snippet.title}`);
       } else {
-        console.log(`✅ Vidéo détectée : ${info.snippet.title}`);
+        console.log(`[YOUTUBE] ✅ Vidéo détectée : ${info.snippet.title}`);
       }
-
-      if (videoId === lastId) continue; // déjà annoncé
 
       newVideo = info;
       break;
     }
 
-    // 📌 Premier lancement → juste enregistrer l'ID
-    if (!lastId && newVideo) {
-      console.log("📌 Premier lancement : ID enregistré, aucune annonce envoyée.");
-      saveLastId(newVideo.id);
+    if (!newVideo) {
+      console.log("[YOUTUBE] ℹ️ Aucune nouvelle vidéo trouvée.");
       return;
     }
 
-    // 📢 Annonce Discord si nouvelle vidéo
-    if (newVideo) {
-      saveLastId(newVideo.id);
+    // 📌 Sauvegarde historique
+    saveLastData(newVideo.id, newVideo.snippet.publishedAt);
 
-      const channel = client.channels.cache.get(DISCORD_CHANNEL_ID) as TextChannel;
-      if (!channel) return;
-
-      const embed = new EmbedBuilder()
-        .setColor("#ff0000") // 🔴 Rouge YouTube
-        .setAuthor({
-          name: "📺 Nouvelle vidéo à la Taverne !",
-          iconURL: "https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png"
-        })
-        .setTitle(newVideo.snippet.title)
-        .setURL(`https://youtu.be/${newVideo.id}`)
-        .setDescription(`🍺 Ô gueux ! Tata Vertiga vient de servir un nouveau tonneau visuel à la Taverne !  
-[**Clique ici pour voir la cuvée**](https://youtu.be/${newVideo.id}) avant que ça se réchauffe !`)
-        .setImage(newVideo.snippet.thumbnails.maxres?.url || newVideo.snippet.thumbnails.high.url)
-        .setFooter({ text: "Le Tavernier vous sert en continu" })
-        .setTimestamp();
-
-      await channel.send({ embeds: [embed] });
-      console.log("✅ Nouvelle vidéo YouTube annoncée !");
-    } else {
-      console.log("ℹ️ Aucune nouvelle vidéo trouvée.");
+    // 📢 Publication Discord
+    const channel = client.channels.cache.get(DISCORD_CHANNEL_ID) as TextChannel;
+    if (!channel) {
+      console.error("[YOUTUBE] ❌ Salon Discord introuvable.");
+      return;
     }
+
+    const embed = new EmbedBuilder()
+      .setColor("#ff0000")
+      .setAuthor({
+        name: "📺 Nouvelle vidéo à la Taverne !",
+        iconURL: "https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png",
+      })
+      .setTitle(newVideo.snippet.title)
+      .setURL(`https://youtu.be/${newVideo.id}`)
+      .setDescription(`🍺 Ô gueux ! Tata Vertiga vient de servir un nouveau tonneau visuel à la Taverne !  
+[**Clique ici pour voir la cuvée**](https://youtu.be/${newVideo.id}) avant que ça se réchauffe !`)
+      .setImage(newVideo.snippet.thumbnails.maxres?.url || newVideo.snippet.thumbnails.high.url)
+      .setFooter({ text: "Le Tavernier vous sert en continu" })
+      .setTimestamp();
+
+    const button = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel("📺 Voir la vidéo")
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://youtu.be/${newVideo.id}`)
+    );
+
+    await channel.send({ embeds: [embed], components: [button] });
+    console.log("[YOUTUBE] 📢 Nouvelle vidéo annoncée !");
   } catch (err: unknown) {
     if (err instanceof Error) {
-      console.error("❌ Erreur YouTube :", err.message);
+      console.error("[YOUTUBE] ❌ Erreur API :", err.message);
     } else {
-      console.error("❌ Erreur YouTube :", err);
+      console.error("[YOUTUBE] ❌ Erreur API inconnue :", err);
     }
   }
 }
