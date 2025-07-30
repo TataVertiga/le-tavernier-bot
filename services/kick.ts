@@ -132,6 +132,10 @@ async function checkKickLive() {
   }
 
   const data: KickResponse = await response.json();
+
+  // --- DEBUG complet ---
+  console.log("[DEBUG] Réponse Kick brute :", JSON.stringify(data, null, 2));
+
   let isLive = data.data[0]?.livestream?.is_live ?? false;
 
   // Mode debug
