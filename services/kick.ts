@@ -50,8 +50,6 @@ function resetDiscordMemory() {
   if (fs.existsSync(lastDiscordFile)) {
     fs.unlinkSync(lastDiscordFile);
     console.log("[DISCORD] ♻️ Mémoire notification réinitialisée.");
-  } else {
-    console.log("[DISCORD] ♻️ Rien à réinitialiser (déjà vide).");
   }
 }
 
@@ -136,10 +134,7 @@ async function checkKickLive() {
 
   const data: KickResponse = await response.json();
 
-  // --- DEBUG complet ---
-  console.log("[DEBUG] Réponse Kick brute :", JSON.stringify(data, null, 2));
-
-  // 📌 Nouvelle lecture compatible avec les deux formats API
+  // 📌 Lecture compatible avec ancienne et nouvelle API Kick
   let isLive = data.data[0]?.stream?.is_live 
             ?? data.data[0]?.livestream?.is_live 
             ?? false;
