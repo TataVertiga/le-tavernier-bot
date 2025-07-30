@@ -41,13 +41,18 @@ async function checkKickClips(client: Client) {
       clipData = await getFromKickDirect();
     }
 
-    if (!clipData) return; // toujours rien trouvé
+    if (!clipData) {
+      console.log("⏩ Aucun clip trouvé.");
+      return;
+    }
 
     const lastClipId = fs.existsSync(lastClipFile)
       ? JSON.parse(fs.readFileSync(lastClipFile, "utf8")).url
       : null;
 
     if (clipData.url !== lastClipId) {
+      console.log(`✅ Nouveau clip détecté : ${clipData.title}`);
+
       const channel = client.channels.cache.get("926619311613804544") as TextChannel;
       if (channel) {
         const embed = new EmbedBuilder()
@@ -72,8 +77,10 @@ async function checkKickClips(client: Client) {
 
         await channel.send({ embeds: [embed], components: [row] });
         fs.writeFileSync(lastClipFile, JSON.stringify({ url: clipData.url }));
-        console.log(`✅ Clip posté : ${clipData.title}`);
+        console.log(`📤 Clip publié sur Discord : ${clipData.title}`);
       }
+    } else {
+      console.log("⏩ Aucun nouveau clip détecté.");
     }
   } catch (err) {
     if (err instanceof Error) {
