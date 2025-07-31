@@ -21,8 +21,7 @@ export default {
 
     // ✅ Vérifie que le salon est bien textuel
     if (message.channel?.isTextBased()) {
-      const channel = message.channel as TextChannel;
-      await channel.send(embedPayload); // Envoi direct de l'embed
+      await (message.channel as TextChannel).send(embedPayload); // Fix TypeScript
       await message.reply("✅ Embed de test envoyé !");
     } else {
       await message.reply("⚠️ Impossible d'envoyer l'embed ici.");
