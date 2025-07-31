@@ -1,37 +1,59 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message, TextChannel } from "discord.js";
-import { kickLogo, kickGreen, defaultClipImage } from "../config.js";
+import { Message, TextChannel } from "discord.js";
+import { createClipEmbed } from "../embedTemplates.js";
+import fs from "fs";
+import path from "path";
+
+const lastTestClipFile = path.join(process.cwd(), "last_testclip.json");
+
+// --- Anti-doublon ---
+function alreadyNotifiedTestClip(): boolean {
+  if (fs.existsSync(lastTestClipFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(lastTestClipFile, "utf8"));
+      if (data.clipId === "test-slug") return true;
+    } catch {}
+  }
+  return false;
+}
+
+function markTestClipNotified() {
+  fs.writeFileSync(lastTestClipFile, JSON.stringify({ clipId: "test-slug", time: Date.now() }));
+}
+
+function resetTestClipMemory() {
+  if (fs.existsSync(lastTestClipFile)) {
+    fs.unlinkSync(lastTestClipFile);
+    console.log("[TESTCLIP] ♻️ Mémoire reset.");
+  }
+}
 
 export default {
   name: "testclip",
-  description: "Envoie un embed de test pour les clips Kick",
+  description: "Envoie un embed de test pour les clips Kick (avec anti-doublon)",
 
   async execute(message: Message) {
-    const clipUrl = `https://kick.com/${process.env.KICK_USERNAME}/clip/test-slug`;
+    const kickUsername = process.env.KICK_USERNAME;
+    if (!kickUsername) {
+      return message.reply("⚠️ `KICK_USERNAME` n'est pas défini dans le `.env`.");
+    }
 
-    const embed = new EmbedBuilder()
-      .setColor(kickGreen)
-      .setAuthor({ name: "🎬 Nouveau clip de la Taverne !", iconURL: kickLogo })
-      .setTitle("Moment épique de la taverne")
-      .setURL(clipUrl)
-      .setImage(defaultClipImage)
-      .setDescription(`Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
-**Auteur :** Testeur`)
-      .setFooter({
-        text: "Le Tavernier • Clip Kick",
-        iconURL: kickLogo,
-      })
-      .setTimestamp();
+    // --- Vérification anti-doublon ---
+    if (alreadyNotifiedTestClip()) {
+      return message.reply("⚠️ Un clip test a déjà été envoyé récemment. (Mémoire anti-doublon active)");
+    }
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setLabel("▶️ Voir le clip")
-        .setStyle(ButtonStyle.Link)
-        .setURL(clipUrl)
+    const embedPayload = createClipEmbed(
+      kickUsername,
+      "test-slug",
+      "https://i.imgur.com/EvS2L1m.jpeg",
+      "Testeur"
     );
 
-    if (message.channel && message.channel.isTextBased()) {
-      const textChannel = message.channel as TextChannel;
-      await textChannel.send({ embeds: [embed], components: [row] });
+    // ✅ Vérifie que le salon est bien textuel
+    if (message.channel?.isTextBased()) {
+      const channel = message.channel as TextChannel;
+      await channel.send({ ...embedPayload });
+      markTestClipNotified();
       await message.reply("✅ Embed de test envoyé !");
     } else {
       await message.reply("⚠️ Impossible d'envoyer l'embed ici.");

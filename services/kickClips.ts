@@ -2,105 +2,93 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import type { Client, TextChannel } from "discord.js";
-import { kickLogo, kickGreen, defaultClipImage } from "../config.js";
+import { createClipEmbed } from "../embedTemplates.js";
 
-let lastClipSlug: string | null = null;
-let clipCheckInterval: NodeJS.Timeout | null = null;
+const lastClipsFile = path.join(process.cwd(), "last_clips.json");
+let clipInterval: NodeJS.Timeout | null = null;
 
-const lastClipFile = path.join(process.cwd(), "last_clip.json");
+// --- Sauvegarde avec purge des vieux clips ---
+function savePostedClips(clips: string[]) {
+  const limitedClips = clips.slice(-50); // Garde seulement les 50 derniers
+  fs.writeFileSync(lastClipsFile, JSON.stringify(limitedClips, null, 2));
+  console.log(`[KICK-CLIPS] 💾 Sauvegarde clips postés (total: ${limitedClips.length})`);
+}
 
-// --- Lecture dernier clip envoyé ---
-function getLastClipSlug(): string | null {
-  if (fs.existsSync(lastClipFile)) {
-    try {
-      const data = JSON.parse(fs.readFileSync(lastClipFile, "utf8"));
-      return data.slug || null;
-    } catch {}
+// --- Marque un clip comme déjà posté ---
+function markClipAsPosted(clipId: string) {
+  let postedClips: string[] = [];
+  if (fs.existsSync(lastClipsFile)) {
+    postedClips = JSON.parse(fs.readFileSync(lastClipsFile, "utf8"));
   }
-  return null;
+
+  postedClips.push(clipId);
+  savePostedClips(postedClips); // Purge si > 50
 }
 
-// --- Sauvegarde dernier clip envoyé ---
-function saveLastClipSlug(slug: string) {
-  fs.writeFileSync(lastClipFile, JSON.stringify({ slug, time: Date.now() }));
+// --- Vérifie si déjà posté ---
+function alreadyPosted(clipId: string): boolean {
+  if (!fs.existsSync(lastClipsFile)) return false;
+  const postedClips: string[] = JSON.parse(fs.readFileSync(lastClipsFile, "utf8"));
+  return postedClips.includes(clipId);
 }
 
-// --- Récupération des clips Kick ---
-async function fetchLatestClip() {
+// --- Récupération et envoi des clips ---
+async function checkNewClips(client: Client) {
+  console.log("[KICK-CLIPS] 📡 Vérification des nouveaux clips...");
+
   try {
-    const { data } = await axios.get(`https://kick.com/api/v2/channels/${process.env.KICK_USERNAME}/clips`);
-    return data?.clips?.[0] || null;
+    const { data } = await axios.get(
+      `https://kick.com/api/v2/channels/${process.env.KICK_USERNAME}/clips`
+    );
+
+    if (!data || !Array.isArray(data)) {
+      console.log("[KICK-CLIPS] ❌ Impossible de récupérer les clips.");
+      return;
+    }
+
+    const newClips = data.filter((clip: any) => !alreadyPosted(clip.slug));
+
+    if (newClips.length === 0) {
+      console.log("[KICK-CLIPS] 📭 Aucun nouveau clip trouvé.");
+      return;
+    }
+
+    console.log(`[KICK-CLIPS] 🎬 ${newClips.length} nouveau(x) clip(s) trouvé(s)`);
+
+    const channel = client.channels.cache.get(process.env.CLIPS_CHANNEL_ID || "") as TextChannel;
+    if (!channel) {
+      console.error("[KICK-CLIPS] ❌ Salon clips introuvable.");
+      return;
+    }
+
+    for (const clip of newClips) {
+      const embedPayload = createClipEmbed(
+        process.env.KICK_USERNAME || "",
+        clip.slug,
+        clip.thumbnail?.url || "https://i.imgur.com/EvS2L1m.jpeg",
+        clip.creator?.username || "Inconnu"
+      );
+
+      await channel.send(embedPayload);
+      markClipAsPosted(clip.slug);
+      console.log(`[KICK-CLIPS] 📢 Clip posté : ${clip.slug}`);
+    }
   } catch (err) {
-    console.error("[KICK-CLIP] ❌ Erreur récupération clips :", err);
-    return null;
+    console.error("[KICK-CLIPS] ❌ Erreur récupération clips :", err);
   }
 }
 
-// --- Envoi embed Discord ---
-async function sendClipEmbed(clip: any, client: Client) {
-  if (!clip?.slug) return;
-
-  const clipUrl = `https://kick.com/${process.env.KICK_USERNAME}/clip/${clip.slug}`;
-  const clipImage = clip?.thumbnail?.url || defaultClipImage;
-
-  const embed = {
-    color: kickGreen,
-    author: {
-      name: "🎬 Nouveau clip de la Taverne !",
-      icon_url: kickLogo,
-    },
-    title: clip?.title || "Moment épique !",
-    url: clipUrl,
-    description: `Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
-**Auteur :** ${clip?.creator?.username || "Inconnu"}`,
-    image: { url: clipImage },
-    footer: {
-      text: "Le Tavernier • Clip Kick",
-      icon_url: kickLogo,
-    },
-    timestamp: new Date().toISOString(),
-  };
-
-  const row = {
-    type: 1,
-    components: [
-      {
-        type: 2,
-        style: 5,
-        label: "▶️ Voir le clip",
-        url: clipUrl,
-      },
-    ],
-  };
-
-  const channel = client.channels.cache.get(process.env.CHANNEL_ID || "") as TextChannel;
-  if (channel) {
-    await channel.send({ embeds: [embed], components: [row] });
-    console.log(`[KICK-CLIP] 📢 Clip envoyé : ${clip.slug}`);
-  }
-}
-
-// --- Vérification périodique ---
-async function checkClips(client: Client) {
-  const latestClip = await fetchLatestClip();
-  if (!latestClip) return;
-
-  const storedSlug = getLastClipSlug();
-  if (storedSlug !== latestClip.slug) {
-    saveLastClipSlug(latestClip.slug);
-    await sendClipEmbed(latestClip, client);
-  }
-}
-
-// --- Modifie la fréquence de vérif en fonction du live ---
+// --- Ajuste la fréquence de vérif selon le statut live ---
 export function updateClipCheckFrequency(client: Client, isLive: boolean) {
-  if (clipCheckInterval) clearInterval(clipCheckInterval);
+  if (clipInterval) clearInterval(clipInterval);
 
-  if (isLive) {
-    console.log("[KICK-CLIP] 📡 Passage en mode live → vérification toutes les 60s");
-    clipCheckInterval = setInterval(() => checkClips(client), 60 * 1000);
-  } else {
-    console.log("[KICK-CLIP] ⏳ Mode hors live → vérification toutes les 10min");
-    clipCheckInterval = setInterval(() => checkClips(client), 10 * 60 * 1000);
-  }
+  const intervalTime = isLive ? 60 * 1000 : 5 * 60 * 1000; // 1 min en live, 5 min hors live
+  clipInterval = setInterval(() => checkNewClips(client), intervalTime);
+
+  console.log(`[KICK-CLIPS] ⏱ Vérification clips toutes les ${intervalTime / 1000}s`);
+}
+
+export function initKickClips(client: Client) {
+  console.log("[KICK-CLIPS] 🚀 Initialisation...");
+  updateClipCheckFrequency(client, false); // Par défaut hors live
 }
