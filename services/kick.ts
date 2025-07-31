@@ -9,7 +9,7 @@ let lastStatus = false;
 let kickToken = "";
 
 const lastDiscordFile = path.join(process.cwd(), "last_discord.json");
-const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; // Image RP fixe
+const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; // ✅ Image RP fixe
 
 type KickResponse = {
   data: {
@@ -79,14 +79,17 @@ async function sendDiscordEmbed() {
           color: 0x00ff00, // 🍀 Vert Kick
           author: {
             name: "🎥 Live Kick à la Taverne !",
-            icon_url: "https://upload.wikimedia.org/wikipedia/commons/1/1e/Kick_logo.svg",
+            icon_url: "https://i.imgur.com/cUUpk6X.jpeg", // ✅ Logo Kick personnalisé
           },
           title: "⚔️ Tata Vertiga est en live !",
           url: `https://kick.com/${process.env.KICK_USERNAME}`,
           description: `🍺 Ô gueux ! La Taverne a ouvert ses portes et Tata Vertiga est déjà en train de beugler derrière le comptoir !  
 [**Rejoins la fête**](https://kick.com/${process.env.KICK_USERNAME}) et viens t'enfiler une pinte !`,
           image: { url: defaultImage },
-          footer: { text: "Le Tavernier • Live Kick", icon_url: "https://upload.wikimedia.org/wikipedia/commons/1/1e/Kick_logo.svg" },
+          footer: {
+            text: "Le Tavernier • Live Kick",
+            icon_url: "https://i.imgur.com/cUUpk6X.jpeg", // ✅ Logo Kick aussi dans le footer
+          },
           timestamp: new Date().toISOString(),
         },
       ],

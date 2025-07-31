@@ -6,7 +6,6 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { initKick } from './services/kick.js';
-import { initKickClips } from './services/kickClips.js';
 import { checkYoutube } from './services/youtube.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,7 +61,6 @@ client.once('ready', () => {
 
   // 🚀 Lancement des systèmes Kick
   initKick(client);       // Détection live Kick
-  initKickClips(client);  // Surveillance des clips Kick
 
   // 🚀 Surveillance YouTube toutes les 10 minutes
   checkYoutube(client); // Lancement au démarrage

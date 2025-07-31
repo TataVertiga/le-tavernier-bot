@@ -1,148 +1,134 @@
-// services/kickClips.ts
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import type { Client } from "discord.js";
 import * as cheerio from "cheerio";
 import dotenv from "dotenv";
 dotenv.config();
 
-const lastClipFile = path.join(process.cwd(), "last_kick_clip.json");
+const lastClipFile = path.join(process.cwd(), "data", "last_kick_clip.json");
+const defaultClipImage = "https://i.imgur.com/8Q2mpgI.png"; // ✅ Image RP par défaut
+const kickLogo = "https://i.imgur.com/cUUpk6X.jpeg"; // ✅ Logo Kick personnalisé
 
-let clipCheckInterval: NodeJS.Timeout | null = null;
-let currentInterval = 5 * 60 * 1000; // 5 min par défaut
-
-export async function initKickClips(client: Client) {
-  console.log("[CLIPS] 🎞 Surveillance des clips (KickBot + Kick) activée...");
-  startClipCheck(client, currentInterval);
-}
-
-function startClipCheck(client: Client, interval: number) {
-  if (clipCheckInterval) clearInterval(clipCheckInterval);
-  clipCheckInterval = setInterval(() => checkKickClips(client), interval);
-}
-
-export async function updateClipCheckFrequency(client: Client, isLive: boolean) {
-  const newInterval = isLive ? 30 * 1000 : 5 * 60 * 1000;
-  if (newInterval !== currentInterval) {
-    currentInterval = newInterval;
-    console.log(`[CLIPS] ⏱ Fréquence vérification clips : ${isLive ? "30 sec" : "5 min"}`);
-    startClipCheck(client, currentInterval);
+// --- Anti-doublon pour les clips ---
+function alreadyPostedClip(clipId: string): boolean {
+  if (fs.existsSync(lastClipFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(lastClipFile, "utf8"));
+      if (data.lastClipId === clipId) return true;
+    } catch {}
   }
+  return false;
 }
 
-async function checkKickClips(client: Client) {
+function markClipPosted(clipId: string) {
+  fs.writeFileSync(lastClipFile, JSON.stringify({ lastClipId: clipId, time: Date.now() }));
+}
+
+// --- Récupération du dernier clip Kick ---
+async function fetchLatestClip(): Promise<{ id: string; title: string; url: string; thumbnail: string } | null> {
   try {
-    let clipData = await getFromKickBot();
+    const channelName = process.env.KICK_USERNAME;
+    const clipsUrl = `https://kick.com/${channelName}/clips`;
 
-    // Si KickBot ne donne rien → fallback sur Kick direct
-    if (!clipData) {
-      console.warn("[CLIPS] ⚠️ KickBot indisponible → fallback sur Kick direct");
-      clipData = await getFromKickDirect();
-    }
+    const { data: html } = await axios.get(clipsUrl);
+    const $ = cheerio.load(html);
 
-    if (!clipData) {
-      console.log("[CLIPS] ⏩ Aucun clip trouvé.");
-      return;
-    }
+    const clipElement = $("a[href*='/clip/']").first();
+    if (!clipElement.length) return null;
 
-    const lastClipId = fs.existsSync(lastClipFile)
-      ? JSON.parse(fs.readFileSync(lastClipFile, "utf8")).url
-      : null;
+    const clipUrl = `https://kick.com${clipElement.attr("href")}`;
+    const clipId = clipElement.attr("href")?.split("/").pop() || "";
 
-    if (clipData.url !== lastClipId) {
-      console.log(`[CLIPS] ✅ Nouveau clip détecté : ${clipData.title}`);
+    // Titre (si disponible)
+    const title = clipElement.find("p").first().text().trim() || "Clip sans titre";
 
-      const channel = client.channels.cache.get("926619311613804544") as TextChannel;
-      if (channel) {
-        const embed = new EmbedBuilder()
-          .setColor(0x00ff00)
-          .setTitle(`🎬 ${clipData.title}`)
-          .setURL(clipData.url)
-          .setImage(clipData.thumbnail)
-          .setDescription(`Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
-**Auteur :** ${clipData.author}`)
-          .setFooter({
-            text: "Le Tavernier • Clip Kick",
-            iconURL: "https://kick.com/favicon.ico"
-          })
-          .setTimestamp();
+    // Miniature
+    let thumbnail = clipElement.find("img").attr("src") || defaultClipImage;
+    if (thumbnail.startsWith("//")) thumbnail = "https:" + thumbnail;
 
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setLabel("▶️ Voir le clip")
-            .setStyle(ButtonStyle.Link)
-            .setURL(clipData.url)
-        );
-
-        await channel.send({ embeds: [embed], components: [row] });
-        fs.writeFileSync(lastClipFile, JSON.stringify({ url: clipData.url }));
-        console.log(`[CLIPS] 📤 Clip publié sur Discord : ${clipData.title}`);
-      }
-    } else {
-      console.log("[CLIPS] ⏩ Aucun nouveau clip détecté.");
-    }
+    return { id: clipId, title, url: clipUrl, thumbnail };
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[CLIPS] ❌ Erreur récupération clips :", err.message);
-    } else {
-      console.error("[CLIPS] ❌ Erreur récupération clips :", err);
+    console.error("[KICK CLIPS] ❌ Erreur récupération clip :", err);
+    return null;
+  }
+}
+
+// --- Envoi embed Discord pour les clips ---
+async function sendClipToDiscord(clip: { id: string; title: string; url: string; thumbnail: string }) {
+  await axios.post(
+    `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`,
+    {
+      content: `🎬 Nouveau clip Kick dispo à la taverne !`,
+      embeds: [
+        {
+          color: 0x00ff00, // Vert Kick
+          author: {
+            name: "📹 Clip Kick à la Taverne",
+            icon_url: kickLogo, // ✅ Logo Kick personnalisé
+          },
+          title: clip.title,
+          url: clip.url,
+          image: { url: clip.thumbnail || defaultClipImage },
+          footer: {
+            text: "Le Tavernier • Clip Kick",
+            icon_url: kickLogo, // ✅ Logo Kick dans le footer aussi
+          },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 5,
+              label: "▶️ Voir le clip",
+              url: clip.url,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      headers: {
+        Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  console.log("[DISCORD] 📢 Nouveau clip Kick envoyé !");
+}
+
+// --- Fréquence de vérification clips ---
+let clipInterval: NodeJS.Timeout | null = null;
+
+export function updateClipCheckFrequency(client: Client, isLive: boolean) {
+  if (isLive) {
+    if (!clipInterval) {
+      console.log("[KICK CLIPS] 🎥 Live détecté → Vérification clips toutes les 2 min");
+      clipInterval = setInterval(() => checkForNewClip(client), 2 * 60 * 1000);
+    }
+  } else {
+    if (clipInterval) {
+      console.log("[KICK CLIPS] 💤 Fin de live → Arrêt vérification clips");
+      clearInterval(clipInterval);
+      clipInterval = null;
     }
   }
 }
 
-/**
- * 📌 Méthode 1 : KickBot
- */
-async function getFromKickBot() {
-  try {
-    const url = `https://www.kickbot.com/clips/${process.env.KICK_USERNAME}`;
-    const { data: html } = await axios.get(url, {
-      headers: { "User-Agent": "Mozilla/5.0" }
-    });
+// --- Vérification et envoi clip ---
+async function checkForNewClip(client: Client) {
+  const latestClip = await fetchLatestClip();
+  if (!latestClip) return;
 
-    const $ = cheerio.load(html);
-    const firstClipElement = $("a[href^='/clip/']").first();
-    if (!firstClipElement.length) return null;
-
-    const clipPath = firstClipElement.attr("href");
-    const clipUrl = `https://www.kickbot.com${clipPath}`;
-    const thumbnail = firstClipElement.find("img").attr("src") || "https://kick.com/favicon.ico";
-    const title = firstClipElement.find("h3").text().trim() || "Clip sans titre";
-    const author = firstClipElement.find(".clip-author").text().trim() || "Inconnu";
-
-    return { url: clipUrl, thumbnail, title, author };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * 📌 Méthode 2 : Kick direct (fallback)
- */
-async function getFromKickDirect() {
-  try {
-    const url = `https://kick.com/${process.env.KICK_USERNAME}?tab=clips`;
-    const { data: html } = await axios.get(url, {
-      headers: { "User-Agent": "Mozilla/5.0" }
-    });
-
-    const $ = cheerio.load(html);
-    const jsonData = $('script#__NEXT_DATA__').html();
-    if (!jsonData) return null;
-
-    const parsed = JSON.parse(jsonData);
-    const clips = parsed.props.pageProps.data.clips || [];
-    if (clips.length === 0) return null;
-
-    const latestClip = clips[0];
-    const clipUrl = `https://kick.com/${process.env.KICK_USERNAME}/clip/${latestClip.slug}`;
-    const thumbnail = latestClip.thumbnail?.url || "https://kick.com/favicon.ico";
-    const title = latestClip.title || "Clip sans titre";
-    const author = latestClip.created_by?.username || "Inconnu";
-
-    return { url: clipUrl, thumbnail, title, author };
-  } catch {
-    return null;
+  if (!alreadyPostedClip(latestClip.id)) {
+    await sendClipToDiscord(latestClip);
+    markClipPosted(latestClip.id);
+  } else {
+    console.log("[KICK CLIPS] ⚠️ Clip déjà envoyé, pas de doublon.");
   }
 }
