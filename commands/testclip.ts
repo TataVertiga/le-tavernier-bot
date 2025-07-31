@@ -1,4 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message, TextChannel } from "discord.js";
+import { kickLogo, kickGreen, defaultClipImage } from "../config.js";
 
 export default {
   name: "testclip",
@@ -8,15 +9,16 @@ export default {
     const clipUrl = `https://kick.com/${process.env.KICK_USERNAME}/clip/test-slug`;
 
     const embed = new EmbedBuilder()
-      .setColor(0x00ff00)
-      .setTitle(`🎬 Moment épique de la taverne`)
+      .setColor(kickGreen)
+      .setAuthor({ name: "🎬 Nouveau clip de la Taverne !", iconURL: kickLogo })
+      .setTitle("Moment épique de la taverne")
       .setURL(clipUrl)
-      .setImage("https://i.imgur.com/EvS2L1m.jpeg")
+      .setImage(defaultClipImage)
       .setDescription(`Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰  
 **Auteur :** Testeur`)
       .setFooter({
         text: "Le Tavernier • Clip Kick",
-        iconURL: "https://kick.com/favicon.ico"
+        iconURL: kickLogo,
       })
       .setTimestamp();
 
@@ -27,9 +29,8 @@ export default {
         .setURL(clipUrl)
     );
 
-    // ✅ Vérifie que c'est bien un salon texte
     if (message.channel && message.channel.isTextBased()) {
-      const textChannel = message.channel as TextChannel; // cast TS
+      const textChannel = message.channel as TextChannel;
       await textChannel.send({ embeds: [embed], components: [row] });
       await message.reply("✅ Embed de test envoyé !");
     } else {

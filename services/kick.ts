@@ -4,12 +4,12 @@ import path from "path";
 import { publierTweetLiveKick, resetTweetMemory } from "./twitter.js";
 import { updateClipCheckFrequency } from "./kickClips.js";
 import type { Client } from "discord.js";
+import { kickLogo, kickGreen, defaultClipImage, liveRoleId } from "../config.js";
 
 let lastStatus = false;
 let kickToken = "";
 
 const lastDiscordFile = path.join(process.cwd(), "last_discord.json");
-const defaultImage = "https://i.imgur.com/8Q2mpgI.png"; // ✅ Image RP fixe
 
 type KickResponse = {
   data: {
@@ -60,7 +60,7 @@ async function getKickToken(): Promise<KickTokenBody> {
     }),
   });
 
-  if (response.status != 200) {
+  if (response.status !== 200) {
     console.error(`[KICK] ❌ Erreur récupération token : ${response.status}`);
     await new Promise((resolve) => setTimeout(resolve, 15000));
     return getKickToken();
@@ -73,22 +73,22 @@ async function sendDiscordEmbed() {
   await axios.post(
     `https://discord.com/api/v10/channels/${process.env.CHANNEL_ID}/messages`,
     {
-      content: `🍺 Mortecouille bande de gueux ! Un live sauvage apparaît sur <@&881684792058466354> !`,
+      content: `🍺 Mortecouille bande de gueux ! Un live sauvage apparaît sur <@&${liveRoleId}> !`,
       embeds: [
         {
-          color: 0x00ff00, // 🍀 Vert Kick
+          color: kickGreen,
           author: {
             name: "🎥 Live Kick à la Taverne !",
-            icon_url: "https://i.imgur.com/cUUpk6X.jpeg", // ✅ Logo Kick personnalisé
+            icon_url: kickLogo,
           },
           title: "⚔️ Tata Vertiga est en live !",
           url: `https://kick.com/${process.env.KICK_USERNAME}`,
           description: `🍺 Ô gueux ! La Taverne a ouvert ses portes et Tata Vertiga est déjà en train de beugler derrière le comptoir !  
 [**Rejoins la fête**](https://kick.com/${process.env.KICK_USERNAME}) et viens t'enfiler une pinte !`,
-          image: { url: defaultImage },
+          image: { url: defaultClipImage },
           footer: {
             text: "Le Tavernier • Live Kick",
-            icon_url: "https://i.imgur.com/cUUpk6X.jpeg", // ✅ Logo Kick aussi dans le footer
+            icon_url: kickLogo,
           },
           timestamp: new Date().toISOString(),
         },
@@ -127,11 +127,11 @@ async function checkKickLive(client: Client) {
     headers: { Authorization: "Bearer " + kickToken },
   });
 
-  if (response.status == 401) {
+  if (response.status === 401) {
     console.log("[KICK] ♻️ Token expiré → Rafraîchissement...");
     kickToken = (await getKickToken()).access_token;
     return checkKickLive(client);
-  } else if (response.status != 200) {
+  } else if (response.status !== 200) {
     console.error(`[KICK] ❌ Erreur API : ${response.status}`);
     return setTimeout(() => checkKickLive(client), 30000);
   }
