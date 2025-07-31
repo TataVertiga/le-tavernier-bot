@@ -52,7 +52,8 @@ export function createClipEmbed(
 
   const embed = new EmbedBuilder()
     .setColor(kickGreen)
-    .setTitle(`🎬 Moment épique de la taverne`)
+    .setAuthor({ name: "🎬 Nouveau clip Kick !", iconURL: kickLogo })
+    .setTitle(`Moment épique de la taverne`)
     .setURL(clipUrl)
     .setImage(clipImage || defaultClipImage)
     .setDescription(
