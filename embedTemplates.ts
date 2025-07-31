@@ -58,7 +58,7 @@ export function createClipEmbed(
     .setDescription(
       `Une scène digne des chroniques vient d'être figée dans le temps sur **Kick** ! 🏰\n**Auteur :** ${auteur}`
     )
-    .setFooter({ text: "Le Tavernier • Clip Kick", iconURL: "https://kick.com/favicon.ico" })
+    .setFooter({ text: "Le Tavernier • Clip Kick", iconURL: kickLogo })
     .setTimestamp();
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
