@@ -17,7 +17,10 @@ function alreadyNotifiedTestClip(): boolean {
 }
 
 function markTestClipNotified() {
-  fs.writeFileSync(lastTestClipFile, JSON.stringify({ clipId: "test-slug", time: Date.now() }));
+  fs.writeFileSync(
+    lastTestClipFile,
+    JSON.stringify({ clipId: "test-slug", time: Date.now() })
+  );
 }
 
 function resetTestClipMemory() {
@@ -39,20 +42,23 @@ export default {
 
     // --- Vérification anti-doublon ---
     if (alreadyNotifiedTestClip()) {
-      return message.reply("⚠️ Un clip test a déjà été envoyé récemment. (Mémoire anti-doublon active)");
+      return message.reply(
+        "⚠️ Un clip test a déjà été envoyé récemment. (Mémoire anti-doublon active)"
+      );
     }
 
+    // --- Crée l'embed ---
     const embedPayload = createClipEmbed(
       kickUsername,
       "test-slug",
-      "https://i.imgur.com/EvS2L1m.jpeg",
+      "https://i.imgur.com/KbvfR3z.png", // image par défaut
       "Testeur"
     );
 
     // ✅ Vérifie que le salon est bien textuel
     if (message.channel?.isTextBased()) {
       const channel = message.channel as TextChannel;
-      await channel.send({ ...embedPayload });
+      await channel.send(embedPayload); // ⬅️ Envoi direct (pas de destructuration)
       markTestClipNotified();
       await message.reply("✅ Embed de test envoyé !");
     } else {

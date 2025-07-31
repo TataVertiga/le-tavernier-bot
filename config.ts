@@ -1,10 +1,10 @@
 // 🎨 Configuration visuelle commune pour les annonces Kick
 
 // ✅ Logo Kick harmonisé (utilisé en author et footer)
-export const kickLogo = "https://i.imgur.com/cUUpk6X.jpeg";
+export const kickLogo = "https://i.imgur.com/ynFttC3.png";
 
 // ✅ Image RP par défaut (utilisée si aucune miniature dispo)
-export const defaultClipImage = "https://i.imgur.com/8Q2mpgI.png";
+export const defaultClipImage = "https://i.imgur.com/KbvfR3z.png";
 
 // ✅ Couleur verte Kick
 export const kickGreen = 0x00ff00;
