@@ -5,7 +5,7 @@ import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, But
 import dotenv from "dotenv";
 dotenv.config();
 
-console.log("[YOUTUBE] 🛠 Version 1.0.2 - Protection includes partout");
+console.log("[YOUTUBE] 🛠 Version 1.0.3 - Protection includes & JSON blindé");
 
 if (!process.env.CHANNEL_ID) throw new Error("[YOUTUBE] ❌ CHANNEL_ID manquant dans le .env");
 const DISCORD_CHANNEL_ID = process.env.CHANNEL_ID!;
@@ -16,10 +16,15 @@ const lastFile = path.join(process.cwd(), "data", "last_youtube.json");
 
 type LastData = { lastIds: string[]; lastDate?: string };
 
+// 📌 Lecture sécurisée du fichier last_youtube.json
 function getLastData(): LastData {
   if (fs.existsSync(lastFile)) {
     try {
-      return JSON.parse(fs.readFileSync(lastFile, "utf8")) as LastData;
+      const parsed = JSON.parse(fs.readFileSync(lastFile, "utf8"));
+      return {
+        lastIds: Array.isArray(parsed.lastIds) ? parsed.lastIds : [],
+        lastDate: parsed.lastDate || undefined
+      };
     } catch {
       return { lastIds: [] };
     }
@@ -27,6 +32,7 @@ function getLastData(): LastData {
   return { lastIds: [] };
 }
 
+// 📌 Sauvegarde des 10 derniers IDs annoncés
 function saveLastData(videoId: string, publishedAt: string) {
   let data = getLastData();
   if (!data.lastIds) data.lastIds = [];
@@ -56,8 +62,8 @@ export async function checkYoutube(client: Client) {
       const videoId = video?.id?.videoId;
       if (!videoId) continue;
 
-      // 📌 Ignorer si déjà annoncé
-      if (lastData.lastIds.includes(videoId)) continue;
+      // 📌 Ignorer si déjà annoncé (protection lastIds)
+      if ((lastData.lastIds || []).includes(videoId)) continue;
 
       const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,liveStreamingDetails&key=${YT_API}&id=${videoId}`;
       const detailsRes = await axios.get(detailsUrl);
