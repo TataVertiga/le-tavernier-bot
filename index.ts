@@ -1,3 +1,4 @@
+// --- Imports ---
 import express from 'express';
 import { Client, GatewayIntentBits, Events, Message } from 'discord.js';
 import dotenv from 'dotenv';
@@ -8,7 +9,6 @@ import { dirname } from 'path';
 import { initKick } from './services/kick.js';
 import { checkYoutube } from './services/youtube.js';
 import { initAnniversaires } from "./services/anniversaires.js";
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -62,13 +62,15 @@ client.once('ready', () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 
   // 🚀 Lancement des systèmes Kick
-  initKick(client);       // Détection live Kick
-  initAnniversaires(client); // Gestion des anniversaires
+  initKick(client);
+
+  // 🚀 Initialisation des anniversaires
+  initAnniversaires(client);
 
   // 🚀 Surveillance YouTube toutes les 10 minutes
-  checkYoutube(client); // Lancement au démarrage
+  checkYoutube(client);
   setInterval(() => checkYoutube(client), 10 * 60 * 1000);
-});
+}); // <<<<< Fin du bloc 'ready'
 
 // --- Gestion des messages & ping ---
 client.on(Events.MessageCreate, async (message: Message) => {
@@ -131,4 +133,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 });
 
-client.login(process.env.TOKEN);
+// --- Connexion Discord ---
+client.login(process.env.TOKEN).catch((err) => {
+  console.error("❌ Erreur de connexion à Discord :", err);
+});

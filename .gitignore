@@ -37,3 +37,6 @@ last_live_status.txt
 *.pid
 *.seed
 *.pid.lock
+
+# Ignore sensitive files
+data/credentials.json

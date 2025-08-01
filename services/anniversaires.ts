@@ -1,107 +1,94 @@
-import fs from "fs";
-import path from "path";
-import cron from "node-cron";
 import { Client, TextChannel } from "discord.js";
+import { google } from "googleapis";
+import dayjs from "dayjs";
+import "dayjs/locale/fr.js";
+dayjs.locale("fr");
 
-const dataPath = path.join(process.cwd(), "data");
-const birthdaysFile = path.join(dataPath, "birthdays.json");
-const lastBirthdayFile = path.join(dataPath, "lastBirthday.json");
+import dotenv from "dotenv";
+dotenv.config();
 
-function loadBirthdays(): Record<string, { date: string; year?: number }> {
+// --- CONFIG ---
+const ANNIV_CHANNEL_ID = process.env.ANNIV_CHANNEL_ID || ""; // ID salon Discord
+const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID || "";
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
+
+// --- Cache pour éviter le spam ---
+let anniversairesSouhaitesAujourdHui: Set<string> = new Set();
+
+// --- Lecture Google Sheets ---
+async function getAnniversaires(): Promise<{ nom: string; date: string }[]> {
   try {
-    if (!fs.existsSync(birthdaysFile)) return {};
-    const content = fs.readFileSync(birthdaysFile, "utf8").trim();
-    if (!content) return {};
-    return JSON.parse(content);
-  } catch {
-    console.warn("[ANNIV] ⚠️ Erreur lecture birthdays.json → retour vide");
-    return {};
-  }
-}
+    console.log("[ANNIV] Lecture des données Google Sheets…");
+    const sheets = google.sheets({ version: "v4", auth: GOOGLE_API_KEY });
 
-function loadLastBirthday(): Record<string, string> {
-  try {
-    if (!fs.existsSync(lastBirthdayFile)) return {};
-    const content = fs.readFileSync(lastBirthdayFile, "utf8").trim();
-    if (!content) return {};
-    return JSON.parse(content);
-  } catch {
-    console.warn("[ANNIV] ⚠️ Erreur lecture lastBirthday.json → retour vide");
-    return {};
-  }
-}
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEET_ID,
+      range: "Anniversaires!A2:B", // Feuille + plage à ajuster
+    });
 
-function saveLastBirthday(data: Record<string, string>) {
-  try {
-    fs.writeFileSync(lastBirthdayFile, JSON.stringify(data, null, 0), "utf8");
+    const rows = res.data.values || [];
+    console.log(`[ANNIV] ${rows.length} anniversaires trouvés dans le Google Sheet.`);
+    return rows
+      .filter((row) => row.length >= 2)
+      .map((row) => ({
+        nom: row[0],
+        date: row[1],
+      }));
   } catch (err) {
-    console.error("[ANNIV] ❌ Impossible d'écrire lastBirthday.json :", err);
+    console.error("[ANNIV] ❌ Erreur lors de la lecture des anniversaires :", err);
+    return [];
   }
 }
 
-export function initAnniversaires(client: Client) {
-  console.log("[ANNIV] Système d'anniversaires chargé 🍰");
+// --- Vérifie et envoie ---
+async function checkAndSendAnniversaires(client: Client) {
+  const today = dayjs().format("DD/MM");
+  console.log(`[ANNIV] Vérification des anniversaires pour le ${today}...`);
 
-  const checkBirthdays = (logIfNone = true) => {
-    const birthdays = loadBirthdays();
-    const lastBirthday = loadLastBirthday();
-    const today = new Date();
-    const todayKey = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const anniversaires = await getAnniversaires();
+  if (!anniversaires.length) {
+    console.log("[ANNIV] Aucun anniversaire à traiter aujourd’hui.");
+    return;
+  }
 
-    const channel = client.channels.cache.get("837135924390264855") as TextChannel;
-    if (!channel) return console.warn("[ANNIV] ⚠️ Salon introuvable.");
+  for (const anniv of anniversaires) {
+    const dateFormatee = dayjs(anniv.date, ["DD/MM/YYYY", "DD/MM"]).format("DD/MM");
 
-    let foundOne = false;
-
-    for (const [userId, data] of Object.entries(birthdays)) {
-      if (data.date === todayKey) {
-        if (lastBirthday[userId] === todayKey) continue;
-
-        foundOne = true;
-        console.log(`[ANNIV] 🎂 Anniversaire trouvé pour ${userId}`);
-
-        let message;
-        if (data.year) {
-          const age = today.getFullYear() - data.year;
-          const phrases = [
-            `🍺 Bon anniversaire, <@${userId}> ! ${age} ans... t'approches dangereusement de la bière sans mousse.`,
-            `🎂 ${age} ans aujourd'hui <@${userId}> ! Va falloir souffler les bougies... sans cracher dedans.`,
-            `⚔️ ${age} hivers au compteur, <@${userId}>... et toujours pas foutu de payer ta tournée.`,
-            `🍷 Joyeux anniversaire <@${userId}> ! ${age} ans et toujours aussi sobre... enfin presque.`,
-            `🪓 ${age} ans, <@${userId}> ! À cet âge-là, certains arrêtent de boire... mais pas toi.`
-          ];
-          message = phrases[Math.floor(Math.random() * phrases.length)];
-        } else {
-          const phrases = [
-            `🍺 Bon anniversaire <@${userId}> ! Et l'âge ? Ah oui... c'est classé secret taverne.`,
-            `🎂 Joyeux anniversaire <@${userId}> ! Je dirai pas ton âge... mais tu le sens dans tes genoux.`,
-            `⚔️ Un an de plus, <@${userId}> ! On t'apportera pas de gâteau, juste une pinte.`,
-            `🍷 Santé <@${userId}> ! Même si on sait pas quel âge tu as...`,
-            `🪓 Bon anniversaire <@${userId}> ! Un an de plus dans le bide.`
-          ];
-          message = phrases[Math.floor(Math.random() * phrases.length)];
-        }
-
-        console.log(`[DISCORD] 📤 Envoi du message anniversaire pour ${userId}`);
-        channel.send(message);
-
-        lastBirthday[userId] = todayKey;
+    if (dateFormatee === today && !anniversairesSouhaitesAujourdHui.has(anniv.nom)) {
+      const channel = client.channels.cache.get(ANNIV_CHANNEL_ID) as TextChannel;
+      if (!channel) {
+        console.warn("[ANNIV] ⚠️ Salon d'anniversaire introuvable !");
+        return;
       }
+
+      console.log(`[DISCORD] Envoi du message d’anniversaire à ${anniv.nom} dans #${channel.name}`);
+      await channel.send(
+        `🍰 **Joyeux anniversaire ${anniv.nom} !** 🎉  
+La Taverne t’offre une pinte bien fraîche pour fêter ça 🍺`
+      );
+
+      anniversairesSouhaitesAujourdHui.add(anniv.nom);
+      console.log(`[ANNIV] Anniversaire souhaité à : ${anniv.nom}`);
     }
+  }
+}
 
-    if (!foundOne && logIfNone) {
-      console.log("[ANNIV] Aucun anniversaire aujourd'hui");
-    }
+// --- Réinitialise le cache à minuit ---
+function resetCacheMinuit() {
+  anniversairesSouhaitesAujourdHui.clear();
+  console.log("[ANNIV] ♻️ Cache des anniversaires réinitialisé.");
+}
 
-    saveLastBirthday(lastBirthday);
-  };
+// --- Fonction d'init ---
+export function initAnniversaires(client: Client) {
+  console.log("[ANNIV] 📅 Système d'anniversaires démarré...");
 
-  // Première vérification au démarrage → ne log que si anniversaire trouvé
-  checkBirthdays(false);
+  // Vérifie au démarrage
+  checkAndSendAnniversaires(client);
 
-  // Vérification tous les jours à minuit avec logs complets
-  cron.schedule("0 0 * * *", () => {
-    console.log("[ANNIV] Minuit pétante → vérification des anniversaires…");
-    checkBirthdays(true);
-  });
+  // Vérifie toutes les 3h (à ajuster si besoin, pour du “tous les jours à 9h” il faudra autre chose)
+  setInterval(() => checkAndSendAnniversaires(client), 1000 * 60 * 60 * 3);
+
+  // Reset cache à minuit
+  setInterval(resetCacheMinuit, 1000 * 60 * 60 * 24);
 }
