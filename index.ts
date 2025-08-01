@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { initKick } from './services/kick.js';
 import { checkYoutube } from './services/youtube.js';
+import { initAnniversaires } from "./services/anniversaires.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,6 +63,7 @@ client.once('ready', () => {
 
   // 🚀 Lancement des systèmes Kick
   initKick(client);       // Détection live Kick
+  initAnniversaires(client); // Gestion des anniversaires
 
   // 🚀 Surveillance YouTube toutes les 10 minutes
   checkYoutube(client); // Lancement au démarrage
