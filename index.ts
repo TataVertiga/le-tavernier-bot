@@ -6,15 +6,16 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+
+import { PREFIX } from './config.js';
 import { initKick } from './services/kick.js';
 import { checkYoutube } from './services/youtube.js';
 import { initAnniversaires } from "./services/anniversaires.js";
 
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-dotenv.config();
-import { PREFIX } from './config.js';
 
 // --- Serveur Express pour Render ---
 const app = express();
@@ -23,6 +24,7 @@ app.listen(process.env.PORT || 10000, () =>
   console.log(`🚀 Serveur Express actif`)
 );
 
+// --- Client Discord ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,47 +34,50 @@ const client = new Client({
 }) as Client & { lastPingTimes?: Record<string, number> };
 
 // --- Chargement dynamique des commandes ---
-const commands = new Map<string, any>();
-const commandFiles = fs
-  .readdirSync(path.join(__dirname, 'commands'))
-  .filter((file: string) => file.endsWith('.js'));
+async function loadCommands() {
+  const commands = new Map<string, any>();
+  const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(f => f.endsWith('.js'));
 
-for (const file of commandFiles) {
-  const command = await import(`./commands/${file}`);
-  if (command.default.name && typeof command.default.execute === 'function') {
-    commands.set(command.default.name, command.default);
-    console.log(`📦 Commande chargée : ${command.default.name}`);
-  }
+  await Promise.all(commandFiles.map(async file => {
+    const command = await import(`./commands/${file}`);
+    if (command.default?.name && typeof command.default.execute === 'function') {
+      commands.set(command.default.name, command.default);
+      console.log(`📦 Commande chargée : ${command.default.name}`);
+    }
+  }));
+
+  return commands;
 }
 
 // --- Chargement dynamique des événements ---
-const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter((file: string) => file.endsWith('.js'));
+async function loadEvents(client: Client) {
+  const eventsPath = path.join(__dirname, 'events');
+  const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
 
-for (const file of eventFiles) {
-  const event = await import(`./events/${file}`);
-  if (event.default.name && typeof event.default.execute === 'function') {
-    client.on(event.default.name, (...args: any[]) => event.default.execute(...args));
-    console.log(`🎉 Événement chargé : ${event.default.name}`);
-  }
+  await Promise.all(eventFiles.map(async file => {
+    const event = await import(`./events/${file}`);
+    if (event.default?.name && typeof event.default.execute === 'function') {
+      client.on(event.default.name, (...args: any[]) => event.default.execute(...args));
+      console.log(`🎉 Événement chargé : ${event.default.name}`);
+    }
+  }));
 }
 
 // --- Initialisation ---
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 
-  // 🚀 Lancement des systèmes Kick
-  initKick(client);
+  // ⏳ Lancer les services après connexion pour démarrage + rapide
+  setTimeout(() => {
+    initKick(client);
+    initAnniversaires(client);
+    checkYoutube(client);
+    setInterval(() => checkYoutube(client), 10 * 60 * 1000);
+  }, 3000);
+});
 
-  // 🚀 Initialisation des anniversaires
-  initAnniversaires(client);
-
-  // 🚀 Surveillance YouTube toutes les 10 minutes
-  checkYoutube(client);
-  setInterval(() => checkYoutube(client), 10 * 60 * 1000);
-}); // <<<<< Fin du bloc 'ready'
-
-// --- Gestion des messages & ping ---
+// --- Gestion des messages & commandes ---
+let commands: Map<string, any>;
 client.on(Events.MessageCreate, async (message: Message) => {
   if (message.author.bot) return;
 
@@ -80,7 +85,6 @@ client.on(Events.MessageCreate, async (message: Message) => {
   if (message.content.startsWith(PREFIX)) {
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const commandName = args.shift()?.toLowerCase();
-
     if (!commandName) return;
 
     const command = commands.get(commandName);
@@ -133,7 +137,9 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 });
 
-// --- Connexion Discord ---
-client.login(process.env.TOKEN).catch((err) => {
-  console.error("❌ Erreur de connexion à Discord :", err);
-});
+// --- Lancement ---
+(async () => {
+  commands = await loadCommands();
+  await loadEvents(client);
+  await client.login(process.env.TOKEN);
+})();
