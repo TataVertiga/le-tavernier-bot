@@ -6,23 +6,12 @@ const dataPath = path.join(process.cwd(), "data");
 const birthdaysFile = path.join(dataPath, "birthdays.json");
 
 function loadBirthdays(): Record<string, { date: string; year?: number }> {
-  try {
-    if (!fs.existsSync(birthdaysFile)) return {};
-    const content = fs.readFileSync(birthdaysFile, "utf8").trim();
-    if (!content) return {}; // fichier vide
-    return JSON.parse(content);
-  } catch {
-    console.warn("[ANNIV] ⚠️ Erreur lecture birthdays.json → retour vide");
-    return {};
-  }
+  if (!fs.existsSync(birthdaysFile)) return {};
+  return JSON.parse(fs.readFileSync(birthdaysFile, "utf8"));
 }
 
 function saveBirthdays(data: Record<string, { date: string; year?: number }>) {
-  try {
-    fs.writeFileSync(birthdaysFile, JSON.stringify(data, null, 0), "utf8");
-  } catch (err) {
-    console.error("[ANNIV] ❌ Impossible d'écrire birthdays.json :", err);
-  }
+  fs.writeFileSync(birthdaysFile, JSON.stringify(data, null, 0), "utf8");
 }
 
 export default {
