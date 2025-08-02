@@ -8,7 +8,7 @@ import {
   writeBirthdays,
   setBirthday,
   removeBirthday,
-} from "../services/googleSheets"; // Adapte le chemin si besoin
+} from "../services/googleSheets.js"; // Adapte le chemin si besoin
 
 // --- Petites helpers pour le format ---
 function validDate(str: string) {
