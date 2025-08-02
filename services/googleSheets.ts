@@ -4,8 +4,8 @@ import path from "path";
 
 // --- CONFIG ---
 const credentialsPath = path.join(process.cwd(), "data", "credentials.json");
-const spreadsheetId = process.env.GOOGLE_SHEET_ID || ""; // ID du Google Sheets
-const SHEET_ID = 0; // Mets ici le bon sheetId si besoin !
+const spreadsheetId = process.env.GOOGLE_SHEET_ID || "";
+const SHEET_ID = 0; // Modifie selon ton Google Sheet (0 par défaut)
 
 if (!spreadsheetId) {
   console.error("[ANNIV] ❌ GOOGLE_SHEET_ID manquant dans .env !");
@@ -22,8 +22,8 @@ function getAuth() {
   });
 }
 
-// --- Lecture complète (format objet : userId -> {date, year}) ---
-export async function readBirthdays() {
+// --- Lecture complète des anniversaires ---
+export async function readBirthdays(): Promise<Record<string, { date: string; year?: number }>> {
   const auth = getAuth();
   const sheets = google.sheets({ version: "v4", auth });
 
@@ -34,7 +34,6 @@ export async function readBirthdays() {
 
   rows.forEach((row) => {
     const [userId, date, year] = row;
-    // --- On normalise toujours la date stockée (remplace / par -) ---
     if (userId && date) {
       birthdays[userId] = { date: date.replace(/\//g, "-"), ...(year ? { year: parseInt(year) } : {}) };
     }
@@ -64,7 +63,6 @@ export async function writeBirthdays(data: Record<string, { date: string; year?:
 
 // --- Ajoute ou modifie UN anniversaire ---
 export async function setBirthday(userId: string, date: string, year?: number) {
-  // --- On force la normalisation à l’enregistrement aussi ---
   const birthdays = await readBirthdays();
   birthdays[userId] = { date: date.replace(/\//g, "-"), ...(year ? { year } : {}) };
   await writeBirthdays(birthdays);
@@ -93,7 +91,7 @@ export async function removeBirthday(userId: string) {
             range: {
               sheetId: SHEET_ID,
               dimension: "ROWS",
-              startIndex: rowIndex + 1,
+              startIndex: rowIndex + 1, // +1 pour ignorer la ligne d'en-tête
               endIndex: rowIndex + 2
             }
           }
