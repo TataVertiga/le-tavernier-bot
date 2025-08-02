@@ -6,80 +6,85 @@
 
 <p align="center">
   Bienvenue dans la taverne la plus beauf du royaume !<br>
-  <strong>Le Tavernier</strong> est un bot Discord conçu pour animer ta communauté avec un style médiéval, de l'humour franchouillard et une touche de folie RP.
+  <strong>Le Tavernier</strong> est un bot Discord autonome, conçu pour animer ta communauté avec un style médiéval, de l'humour franchouillard et une touche de folie RP.
 </p>
 
 ---
 
-## ⚙️ Le Tavernier - RP Médiéval
+## ⚙️ Fonctionnalités Actuelles
 
-### ✅ Fonctionnalités actuelles
-
-- 🎉 Messages de bienvenue RP dans un salon spécifique
-- 🟢 Annonce automatique des lives **Kick.com** via API officielle
-- 🤡 Commandes fun disponibles :
+- 🎉 **Accueil RP** des nouveaux arrivants après validation RaidProtect
+- 🟢 **Annonces automatiques des lives Kick.com** sur Discord et Twitter
+- 📺 **Notifications automatiques des nouvelles vidéos YouTube**
+- 🎂 **Gestion automatique des anniversaires** via Google Sheets
+- 🤡 **Commandes fun disponibles :**
   - `t!bonjour`
   - `t!douzinite`
   - `t!prout`
+  - `t!anniv` 🎂 (gestion des anniversaires)
   - `t!help`
-  
-## 🛠 Hébergement
-
-Le bot fonctionne 24h/24 grâce à :
-
-- [Render.com](https://render.com) pour héberger le projet Node.js
-- [UptimeRobot](https://uptimerobot.com) pour maintenir le serveur actif
 
 ---
 
-## 📂 Structure du projet
+## 🛠️ Technologies & Hébergement
+
+- **Node.js & TypeScript** (Discord.js v14)
+- **Express.js** (pour le maintien du bot actif)
+- **APIs Kick & Twitter** (notifications temps réel)
+- **Google Sheets API** (gestion centralisée des anniversaires)
+- Hébergement autonome sur [Sparked Host](https://sparkedhost.com)
+
+*Le Tavernier tient debout tout seul chez Sparked Host !*
+
+---
+
+## 📂 Structure du Projet
 
 ```
 le-tavernier-bot/
-├── commands/           # Commandes Discord (bonjour, douzinite, etc.)
-├── events/             # Gestion des événements (arrivées, rôles)
-├── services/           # Intégrations auto (Kick, Twitter, etc.)
-├── data/               # Fichiers temporaires (statuts, IDs)
+├── assets/             # Logos et ressources visuelles
+├── commands/           # Commandes Discord (bonjour, douzinite, anniv...)
+├── events/             # Événements Discord (nouveaux membres, rôles...)
+├── services/           # Intégrations automatiques (Kick, Twitter, YouTube...)
+├── embedTemplates.ts   # Templates d'embeds centralisés
+├── config.ts           # Configuration globale
+├── index.ts            # Démarrage principal du bot
+├── data/               # Fichiers temporaires
 ├── .env                # Variables d’environnement (non versionné)
-├── config.js           # Préfixe & config du bot
-├── index.js            # Démarrage du bot
-├── server.js           # Serveur Express keep-alive
-└── package.json        # Dépendances et scripts
+├── .gitignore
+├── package.json
+├── README.md           # Documentation (ici-même)
+└── tsconfig.json       # Configuration TypeScript
 ```
 
 ---
 
-### ☑️ En cours de développement
+## 🧙‍♂️ Fonctionnalités à Venir
 
-- 🤖 Interaction RP avec Le Tavernier  
-  (répondre selon le contexte, élargir son vocabulaire)
+- 🤖 Interaction RP avancée avec +500 répliques personnalisées
+- 🎵 Notifications automatiques TikTok (réintégration à venir)
+- 🏷️ Gestion automatique des rôles via réactions
+- 🧙‍♂️ Interface back-end privée pour gérer facilement le bot
+- 🎁 Organisation de giveaways dans le style médiéval
+- 🎞️ Création automatique de clips Kick
 
 ---
-
-## 💡 Fonctionnalités prévues
-
-- 🧙‍♂️ Interface back-end privée pour gérer le bot
-- 🪄 Ajout de nouvelles commandes fun et RP
-- 📺 Notifications YouTube automatisées
-- 🎵 Notifications TikTok automatisées
-- 🏷️ Gestion des rôles par réactions
-- 🎁 Giveaways dans le style taverne
-- 🎞️ Création automatique de clips Kick
 
 ## 🤝 Contribuer
 
-Tu veux proposer une nouvelle commande, des répliques beauf ou une amélioration ?  
-Fais un fork du projet, propose une PR, et le Tavernier lèvera sa chope en ton honneur.
+Tu as une idée de commande, une réplique épique ou une amélioration technique ?  
+Fais un fork du projet, propose une PR, et le Tavernier lèvera sa chope en ton honneur !
 
 ---
 
-## 🧙‍♂️ À propos
+## 🧙‍♀️ À Propos
 
 Développé par **Tata Vertiga** pour les poivrots, les trolls, les streamers et les gueux.  
-Le Tavernier ne boit pas vos tokens, mais il peut annoncer quand y a de la cervoise.
+Le Tavernier ne boit pas vos tokens, mais il peut annoncer quand y'a de la cervoise fraîche !
 
 ---
 
 ## 🐾 Licence
 
 ISC — Bois ça avec sagesse, ou subis le courroux du Tavernier.
+
