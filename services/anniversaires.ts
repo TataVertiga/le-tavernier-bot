@@ -32,7 +32,29 @@ const REPLIQUES_SANS_AGE = [
   (userId: string) => `🎂 Tu refuses de donner ton âge, <@${userId}> ? Pas grave, t’as quand même le droit à une pinte offerte !`
 ];
 
-// --- Lecture Google Sheets (A: userId, B: date JJ/MM, C: year) ---
+// --- Helper : parser robuste qui gère JJ-MM[-YYYY] ou MM-JJ[-YYYY] avec tirets ou slash
+function parseDateSmart(dateString: string): { day: string, month: string, year?: string } | null {
+  if (!dateString) return null;
+  const parts = dateString.replace(/\//g, "-").split("-");
+  if (parts.length === 2) {
+    let [a, b] = parts;
+    if (parseInt(a, 10) > 12) return { day: a.padStart(2, "0"), month: b.padStart(2, "0") };
+    if (parseInt(b, 10) > 12) return { day: b.padStart(2, "0"), month: a.padStart(2, "0") };
+    return { day: a.padStart(2, "0"), month: b.padStart(2, "0") };
+  }
+  if (parts.length === 3) {
+    let [a, b, c] = parts;
+    if (c.length === 4) {
+      if (parseInt(a, 10) > 12) return { day: a.padStart(2, "0"), month: b.padStart(2, "0"), year: c };
+      if (parseInt(b, 10) > 12) return { day: b.padStart(2, "0"), month: a.padStart(2, "0"), year: c };
+      return { day: a.padStart(2, "0"), month: b.padStart(2, "0"), year: c };
+    }
+    return null;
+  }
+  return null;
+}
+
+// --- Lecture Google Sheets (A: userId, B: date (JJ-MM ou JJ-MM-YYYY), C: year si colonne séparée) ---
 async function getAnniversaires(): Promise<{ userId: string; date: string; year?: string }[]> {
   try {
     console.log("[ANNIV] Lecture des données Google Sheets…");
@@ -77,14 +99,16 @@ async function checkAndSendAnniversaires(client: Client) {
 
   let count = 0;
   for (const anniv of anniversaires) {
-    const dateFormatee = dayjs(anniv.date, ["DD/MM", "D/M"]).format("DD/MM");
+    const parsed = parseDateSmart(anniv.date.replace(/\//g, "-"));
+    if (!parsed) continue;
+
+    const dateFormatee = `${parsed.day}/${parsed.month}`;
+
     if (dateFormatee === today && !anniversairesSouhaitesAujourdHui.has(anniv.userId)) {
       let age: number | undefined = undefined;
-      if (anniv.year && anniv.date) {
-        const [day, month] = anniv.date.split("/");
-        if (day && month) {
-          age = dayjs().diff(dayjs(`${anniv.year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`), "year");
-        }
+      const year = parsed.year || anniv.year;
+      if (year && parsed.day && parsed.month) {
+        age = dayjs().diff(dayjs(`${year}-${parsed.month}-${parsed.day}`), "year");
       }
       let message: string;
       if (age !== undefined) {

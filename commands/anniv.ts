@@ -8,14 +8,15 @@ import {
   writeBirthdays,
   setBirthday,
   removeBirthday,
-} from "../services/googleSheets.js"; // Adapte le chemin si besoin
+} from "../services/googleSheets.js";
 
 // --- Petites helpers pour le format ---
-function validDate(str: string) {
-  return /^(\d{2})-(\d{2})$/.test(str) || /^(\d{2})-(\d{2})-(\d{4})$/.test(str);
+function validDate(str: string): boolean {
+  return /^(\d{2})[-/](\d{2})$/.test(str) || /^(\d{2})[-/](\d{2})[-/](\d{4})$/.test(str);
 }
-function parseDateParts(str: string) {
-  const parts = str.split("-");
+function parseDateParts(str: string): { day: string; month: string; year?: string } | null {
+  // Accepte JJ-MM, JJ/MM, JJ-MM-AAAA, JJ/MM/AAAA
+  const parts = str.replace(/\//g, "-").split("-");
   if (parts.length === 2) {
     return { day: parts[0], month: parts[1] };
   }
@@ -24,14 +25,14 @@ function parseDateParts(str: string) {
   }
   return null;
 }
-function formatDateFr(day: string, month: string, year?: string) {
+function formatDateFr(day: string, month: string, year?: string): string {
   return `${day}/${month}${year ? "/" + year : ""}`;
 }
 
 export default {
   name: "anniv",
   description: "Gestion des anniversaires dans la Taverne",
-  async execute(message: Message, args: string[]) {
+  async execute(message: Message, args: string[]): Promise<any> {
     const userId = message.author.id;
 
     // --- Juste t!anniv
@@ -44,13 +45,14 @@ export default {
       rep += "• Voir tous : `t!anniv list`\n";
       rep += "💡 Si tu donnes ton année de naissance, ton âge s’affichera dans la liste !\n\n";
       if (entry) {
-        const [day, month] = entry.date.split("/");
-        const year = entry.year ? entry.year.toString() : undefined;
+        let day = "??", month = "??", year = entry.year ? entry.year.toString() : undefined;
+        if (entry.date && typeof entry.date === "string") {
+          const parts = entry.date.replace(/\//g, "-").split("-");
+          [day, month] = parts;
+        }
         rep += `> Tu as enregistré : **${formatDateFr(day, month, year)}**\n`;
-        if (entry.year) {
-          // Calcul âge
-          const [d, m] = entry.date.split("/");
-          const age = dayjs().diff(dayjs(`${entry.year}-${m}-${d}`), "year");
+        if (entry.year && day !== "??" && month !== "??") {
+          const age = dayjs().diff(dayjs(`${year}-${month}-${day}`), "year");
           rep += `> Tu as actuellement **${age} ans** (et toutes tes dents ?)\n`;
         }
       } else {
@@ -61,17 +63,18 @@ export default {
 
     // --- Ajout/modif t!anniv set
     if (args[0] === "set") {
-      if (!args[1] || !validDate(args[1].replace(/\//g, "-"))) {
+      if (!args[1] || !validDate(args[1])) {
         return message.reply("❌ Format incorrect, gueux ! Utilise `t!anniv set JJ-MM` ou `t!anniv set JJ-MM-AAAA`.\nExemple : `t!anniv set 04-11-1987`");
       }
-      const parts = parseDateParts(args[1].replace(/\//g, "-"));
+      const parts = parseDateParts(args[1]);
       if (!parts) {
         return message.reply("❌ Impossible de lire ta date. T’es sûr de toi ?");
       }
-      const date = `${parts.day}/${parts.month}`;
+      // --- On normalise la date EN TIRET AVANT d’enregistrer ---
+      const date = `${parts.day}-${parts.month}`.replace(/\//g, "-");
       const year = parts.year ? parseInt(parts.year) : undefined;
 
-      // Vérifie les bornes (pas le 39/42 !)
+      // Vérifie les bornes
       if (parseInt(parts.day) < 1 || parseInt(parts.day) > 31 || parseInt(parts.month) < 1 || parseInt(parts.month) > 12) {
         return message.reply("❌ C’est pas un vrai jour ou un vrai mois, arrête de picoler !");
       }
@@ -108,13 +111,31 @@ export default {
       }
       let rep = "🎉 **Anniversaires de la Taverne** :\n";
       for (const [uid, entry] of Object.entries(birthdays)) {
-        const [day, month] = entry.date.split("/");
-        const year = entry.year ? entry.year.toString() : undefined;
-        let ligne = `• <@${uid}> : **${formatDateFr(day, month, year)}**`;
-        if (entry.year) {
-          const [d, m] = entry.date.split("/");
-          const age = dayjs().diff(dayjs(`${entry.year}-${m}-${d}`), "year");
-          ligne += ` (${age} ans)`;
+        let displayName = `ID:${uid}`;
+        if (message.guild) {
+          try {
+            const member = await message.guild.members.fetch(uid);
+            if (member) displayName = member.displayName || member.user.username;
+          } catch (e) {
+            // Ignore, fallback sur ID
+          }
+        }
+        // --- On lit en normalisant les dates
+        let day = "??", month = "??", year: string | undefined = undefined;
+        if (entry.date && typeof entry.date === "string") {
+          const parts = entry.date.replace(/\//g, "-").split("-");
+          [day, month] = parts;
+        }
+        if (entry.year && !isNaN(entry.year)) {
+          year = entry.year.toString();
+        }
+        let ligne = `• **${displayName}** : ${formatDateFr(day, month, year)}`;
+        if (year && day !== "??" && month !== "??") {
+          const birthdate = dayjs(`${year}-${month}-${day}`);
+          const age = birthdate.isValid() ? dayjs().diff(birthdate, "year") : null;
+          if (age && age > 0 && age < 120) {
+            ligne += ` (${age} ans)`;
+          }
         }
         rep += ligne + "\n";
       }

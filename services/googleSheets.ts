@@ -2,8 +2,10 @@ import { google } from "googleapis";
 import fs from "fs";
 import path from "path";
 
+// --- CONFIG ---
 const credentialsPath = path.join(process.cwd(), "data", "credentials.json");
 const spreadsheetId = process.env.GOOGLE_SHEET_ID || ""; // ID du Google Sheets
+const SHEET_ID = 0; // Mets ici le bon sheetId si besoin !
 
 if (!spreadsheetId) {
   console.error("[ANNIV] ❌ GOOGLE_SHEET_ID manquant dans .env !");
@@ -32,8 +34,9 @@ export async function readBirthdays() {
 
   rows.forEach((row) => {
     const [userId, date, year] = row;
+    // --- On normalise toujours la date stockée (remplace / par -) ---
     if (userId && date) {
-      birthdays[userId] = { date, ...(year ? { year: parseInt(year) } : {}) };
+      birthdays[userId] = { date: date.replace(/\//g, "-"), ...(year ? { year: parseInt(year) } : {}) };
     }
   });
 
@@ -47,7 +50,7 @@ export async function writeBirthdays(data: Record<string, { date: string; year?:
 
   const values = Object.entries(data).map(([userId, info]) => [
     userId,
-    info.date,
+    (info.date || "").replace(/\//g, "-"),
     info.year || "",
   ]);
 
@@ -61,18 +64,43 @@ export async function writeBirthdays(data: Record<string, { date: string; year?:
 
 // --- Ajoute ou modifie UN anniversaire ---
 export async function setBirthday(userId: string, date: string, year?: number) {
+  // --- On force la normalisation à l’enregistrement aussi ---
   const birthdays = await readBirthdays();
-  birthdays[userId] = { date, ...(year ? { year } : {}) };
+  birthdays[userId] = { date: date.replace(/\//g, "-"), ...(year ? { year } : {}) };
   await writeBirthdays(birthdays);
 }
 
-// --- Supprime UN anniversaire ---
+// --- Supprime UN anniversaire (suppression physique de la ligne) ---
 export async function removeBirthday(userId: string) {
-  const birthdays = await readBirthdays();
-  if (birthdays[userId]) {
-    delete birthdays[userId];
-    await writeBirthdays(birthdays);
-    return true;
+  const auth = getAuth();
+  const sheets = google.sheets({ version: "v4", auth });
+
+  const range = "Anniversaires!A2:C";
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const rows = res.data.values || [];
+  const rowIndex = rows.findIndex(row => row[0] === userId);
+
+  if (rowIndex === -1) {
+    return false;
   }
-  return false;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: SHEET_ID,
+              dimension: "ROWS",
+              startIndex: rowIndex + 1,
+              endIndex: rowIndex + 2
+            }
+          }
+        }
+      ]
+    }
+  });
+
+  return true;
 }
