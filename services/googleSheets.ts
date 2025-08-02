@@ -3,39 +3,30 @@ import fs from "fs";
 import path from "path";
 
 const credentialsPath = path.join(process.cwd(), "data", "credentials.json");
-const spreadsheetId = process.env.GOOGLE_SHEET_ID || ""; // ID de ton Google Sheets
+const spreadsheetId = process.env.GOOGLE_SHEET_ID || ""; // ID du Google Sheets
 
 if (!spreadsheetId) {
-  console.error("[GOOGLE] ❌ GOOGLE_SHEET_ID dans .env !");
+  console.error("[ANNIV] ❌ GOOGLE_SHEET_ID manquant dans .env !");
 }
 
 function getAuth() {
   if (!fs.existsSync(credentialsPath)) {
-    throw new Error("[GOOGLE] ❌ credentials.json introuvable !");
+    throw new Error("[ANNIV] ❌ credentials.json introuvable !");
   }
-
   const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
-
-  const auth = new google.auth.GoogleAuth({
+  return new google.auth.GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
-
-  return auth;
 }
 
+// --- Lecture complète (format objet : userId -> {date, year}) ---
 export async function readBirthdays() {
   const auth = getAuth();
   const sheets = google.sheets({ version: "v4", auth });
 
-  // 🔹 Nom de l'onglet "Anniversaires Taverne"
   const range = "Anniversaires!A2:C";
-
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range,
-  });
-
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
   const rows = res.data.values || [];
   const birthdays: Record<string, { date: string; year?: number }> = {};
 
@@ -49,6 +40,7 @@ export async function readBirthdays() {
   return birthdays;
 }
 
+// --- Écriture complète (remplace tout A2:C) ---
 export async function writeBirthdays(data: Record<string, { date: string; year?: number }>) {
   const auth = getAuth();
   const sheets = google.sheets({ version: "v4", auth });
@@ -65,4 +57,22 @@ export async function writeBirthdays(data: Record<string, { date: string; year?:
     valueInputOption: "RAW",
     requestBody: { values },
   });
+}
+
+// --- Ajoute ou modifie UN anniversaire ---
+export async function setBirthday(userId: string, date: string, year?: number) {
+  const birthdays = await readBirthdays();
+  birthdays[userId] = { date, ...(year ? { year } : {}) };
+  await writeBirthdays(birthdays);
+}
+
+// --- Supprime UN anniversaire ---
+export async function removeBirthday(userId: string) {
+  const birthdays = await readBirthdays();
+  if (birthdays[userId]) {
+    delete birthdays[userId];
+    await writeBirthdays(birthdays);
+    return true;
+  }
+  return false;
 }
