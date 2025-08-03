@@ -1,6 +1,6 @@
 // --- Imports ---
 import express from 'express';
-import { Client, GatewayIntentBits, Events, Message } from 'discord.js';
+import { Client, GatewayIntentBits, Events, Message, TextChannel, MessageFlags } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -11,6 +11,9 @@ import { PREFIX } from './config.js';
 import { initKick } from './services/kick.js';
 import { checkYoutube } from './services/youtube.js';
 import { initAnniversaires } from "./services/anniversaires.js";
+import { getChopeBar } from "./commands/giveaway.js";
+import { resumeGiveaways } from "./services/giveawayManager.js";
+import registerGiveawayInteraction from "./events/interactionCreate.js"; 
 
 dotenv.config();
 
@@ -33,6 +36,9 @@ const client = new Client({
   ],
 }) as Client & { lastPingTimes?: Record<string, number> };
 
+// --- Enregistrement des interactions de giveaway ---
+registerGiveawayInteraction(client);
+
 // --- Chargement dynamique des commandes ---
 async function loadCommands() {
   const commands = new Map<string, any>();
@@ -52,6 +58,7 @@ async function loadCommands() {
 // --- Chargement dynamique des événements ---
 async function loadEvents(client: Client) {
   const eventsPath = path.join(__dirname, 'events');
+  if (!fs.existsSync(eventsPath)) return;
   const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
 
   await Promise.all(eventFiles.map(async file => {
@@ -67,7 +74,10 @@ async function loadEvents(client: Client) {
 client.once('ready', async () => {
   console.log(`✅ Le Tavernier est connecté en tant que ${client.user?.tag}`);
 
-  // ⏳ Lancer les services après connexion pour démarrage + rapide
+  // ✅ Reprise automatique des giveaways après redémarrage
+  resumeGiveaways(client);
+
+  // ⏳ Lancer les autres services
   setTimeout(() => {
     initKick(client);
     initAnniversaires(client);
@@ -143,3 +153,5 @@ client.on(Events.MessageCreate, async (message: Message) => {
   await loadEvents(client);
   await client.login(process.env.TOKEN);
 })();
+
+export default client;
