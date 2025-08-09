@@ -21,7 +21,7 @@ export default {
       setTimeout(() => greetedRecently.delete(newMember.id), 5 * 60 * 1000);
 
       // 🧾 LOG: on a détecté l'ajout du rôle, on va envoyer le message
-      console.log("[ DISCORD ] rôle GUEUX ajouté → message envoyé à", newMember.user.tag);
+      console.log("[DISCORD] rôle GUEUX ajouté → message envoyé à", newMember.user.tag);
 
       const ch = newMember.guild.channels.cache.get(WELCOME_CHANNEL_ID);
       if (!ch || !(ch instanceof TextChannel)) return;
@@ -34,7 +34,7 @@ export default {
         `Allez, installe-toi, évite les flaques suspectes, et fais comme chez toi… mais pas trop. ❤️`
       );
     } catch (e) {
-      console.error("[WELCOME] Erreur GuildMemberUpdate :", e);
+      console.error("[DISCORD] Erreur GuildMemberUpdate :", e);
     }
   },
 };

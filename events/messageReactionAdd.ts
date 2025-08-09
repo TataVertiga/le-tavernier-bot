@@ -17,7 +17,7 @@ export default {
       if (!isRightMessage || !isCheckEmoji) return;
 
       // 🧾 LOG: réaction sur le règlement
-      console.log("[ DISCORD ] reaction ✅ sur règlement par", user.tag);
+      console.log("[DISCORD] reaction ✅ sur règlement par", user.tag);
 
       const guild = reaction.message.guild;
       if (!guild) return;
@@ -28,7 +28,7 @@ export default {
       await member.roles.add(GUEUX_ROLE_ID);
       // Pas de message ici : il partira via GuildMemberUpdate.ts
     } catch (err) {
-      console.error("[ DISCORD ] Erreur attribution rôle GUEUX :", err);
+      console.error("[DISCORD] Erreur attribution rôle GUEUX :", err);
     }
   },
 };
