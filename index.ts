@@ -1,6 +1,6 @@
 // --- Imports ---
 import express from 'express';
-import { Client, GatewayIntentBits, Events, Message, TextChannel, MessageFlags } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, Events, Message } from 'discord.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -11,9 +11,8 @@ import { PREFIX } from './config.js';
 import { initKick } from './services/kick.js';
 import { checkYoutube } from './services/youtube.js';
 import { initAnniversaires } from "./services/anniversaires.js";
-import { getChopeBar } from "./commands/giveaway.js";
 import { resumeGiveaways } from "./services/giveawayManager.js";
-import registerGiveawayInteraction from "./events/interactionCreate.js"; 
+import registerGiveawayInteraction from "./events/interactionCreate.js";
 
 dotenv.config();
 
@@ -30,10 +29,17 @@ app.listen(process.env.PORT || 10000, () =>
 // --- Client Discord ---
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.Guilds,                 // base
+    GatewayIntentBits.GuildMembers,           // nécessaire pour GuildMemberUpdate + rôles
+    GatewayIntentBits.GuildMessages,          // lire/écrire dans les salons
+    GatewayIntentBits.MessageContent,         // si tu lis le contenu des messages
+    GatewayIntentBits.GuildMessageReactions   // nécessaire pour MessageReactionAdd
   ],
+  partials: [
+    Partials.Message,   // fetch messages non mis en cache
+    Partials.Channel,   // requis avec Partials.Message
+    Partials.Reaction   // fetch des réactions non en cache
+  ]
 }) as Client & { lastPingTimes?: Record<string, number> };
 
 // --- Enregistrement des interactions de giveaway ---
@@ -42,7 +48,10 @@ registerGiveawayInteraction(client);
 // --- Chargement dynamique des commandes ---
 async function loadCommands() {
   const commands = new Map<string, any>();
-  const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(f => f.endsWith('.js'));
+  const commandsPath = path.join(__dirname, 'commands');
+  if (!fs.existsSync(commandsPath)) return commands;
+
+  const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
 
   await Promise.all(commandFiles.map(async file => {
     const command = await import(`./commands/${file}`);
@@ -59,6 +68,7 @@ async function loadCommands() {
 async function loadEvents(client: Client) {
   const eventsPath = path.join(__dirname, 'events');
   if (!fs.existsSync(eventsPath)) return;
+
   const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
 
   await Promise.all(eventFiles.map(async file => {
@@ -93,6 +103,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
 
   // --- Commandes ---
   if (message.content.startsWith(PREFIX)) {
+    if (!commands) return; // sécurité au boot
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const commandName = args.shift()?.toLowerCase();
     if (!commandName) return;
@@ -149,9 +160,13 @@ client.on(Events.MessageCreate, async (message: Message) => {
 
 // --- Lancement ---
 (async () => {
+  const token = process.env.DISCORD_TOKEN || process.env.TOKEN; // ← Option B
+  if (!token) {
+    console.error("❌ TOKEN manquant (mets DISCORD_TOKEN=... dans .env)");
+    process.exit(1);
+  }
   commands = await loadCommands();
   await loadEvents(client);
-  await client.login(process.env.TOKEN);
+  await client.login(token);
 })();
-
 export default client;
